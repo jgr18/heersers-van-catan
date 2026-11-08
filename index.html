@@ -107,7 +107,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,planOpen=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -240,14 +240,32 @@ function colorsCard(c){
   });
   return h+'</div>';
 }
+function planDate(d){
+  var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d||"");if(!m)return "";
+  return new Date(+m[1],+m[2]-1,+m[3]).toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"}).replace(/\./g,"");
+}
+function planHtml(c){
+  var p=c.plan||{},has=p.date||p.time||p.where;
+  if(planOpen&&edit)return '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div class="row"><label style="flex:none;width:70px">📅 Datum</label><input type="date" id="pld" value="'+attr(p.date||"")+'"></div><div class="row"><label style="flex:none;width:70px">🕗 Tijd</label><input type="time" id="plt" value="'+attr(p.time||"")+'"></div><div class="row"><label style="flex:none;width:70px">📍 Waar</label><input id="plw" maxlength="40" placeholder="Bijv. bij Piet" value="'+attr(p.where||"")+'"></div><button class="pri" id="plsv">Opslaan</button><p style="text-align:center;margin:6px 0 0"><button class="lnk" id="plcn">Annuleren</button>'+(has?' <button class="lnk" id="plcl">Wissen</button>':'')+'</p></div>';
+  var h='';
+  if(has){
+    h+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:6px 16px;font-family:system-ui,sans-serif;font-size:.92rem">';
+    if(p.date)h+='<span>📅 <b>'+esc(planDate(p.date))+'</b></span>';
+    if(p.time)h+='<span>🕗 <b>'+esc(p.time)+'</b></span>';
+    if(p.where)h+='<span>📍 <b>'+esc(p.where)+'</b></span>';
+    h+='</div>';
+  }
+  if(edit)h+='<p style="margin:8px 0 0"><button class="lnk" data-pl="1">✏️ '+(has?'Afspraak wijzigen':'Afspraak invullen')+'</button></p>';
+  return h;
+}
 function dealerBox(c){
-  if(!c.games.length)return '<div class="card"><h2>🃏 Delen</h2>Potje 1: onderling bepalen.</div>';
+  if(!c.games.length)return '<div class="card"><h2>🃏 Delen</h2>Potje 1: onderling bepalen.'+planHtml(c)+'</div>';
   var g=c.games[c.games.length-1],p=pool(c,g),n=c.games.length,h='<div class="card"><h2>🃏 Delen potje '+(n+1)+'</h2>';
   if(p.length===1)h+='<b>'+cn(c,p[0])+'</b> deelt (laatste in potje '+n+').';
   else if(g.dice&&p.indexOf(g.dice)>-1)h+='<b>'+cn(c,g.dice)+'</b> deelt: gedobbeld tussen '+cnl(c,p," en ")+'.';
   else{h+='Gelijk laatste: '+cnl(c,p," en ")+' dobbelen.';
     h+=edit?'<p><button class="pri" data-dice="1">🎲 Dobbel</button></p>':'<p><small>Wacht op de dobbelworp.</small></p>'}
-  return h+'</div>';
+  return h+planHtml(c)+'</div>';
 }
 function render(){
   if(!sess&&!viewer){$("tabs").innerHTML="";$("view").innerHTML=loginCard();$("sync").textContent="";$("who").innerHTML="";if(loginMsg){$("vce").textContent=loginMsg;loginMsg=""}return}
@@ -406,7 +424,7 @@ document.addEventListener("click",function(e){
     });
     return}
   if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;planOpen=false;delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
   if(!edit)return;
   if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
   if(el.id==="cr"){codeAsk=true;render();return}
@@ -448,7 +466,13 @@ document.addEventListener("click",function(e){
     if(!ok){E.textContent="Kies voor elke speler een plek.";return}
     var wn=vals.filter(function(x){return x===1}).length;
     if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
-        c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
+        c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});delete c1.plan;planOpen=false;persist();render();return}
+  if(el.dataset.pl){planOpen=true;render();return}
+  if(el.id==="plcn"){planOpen=false;render();return}
+  if(el.id==="plcl"){var c9=cc();delete c9.plan;planOpen=false;persist();render();return}
+  if(el.id==="plsv"){var c10=cc(),pd=$("pld").value,pt=$("plt").value,pw=$("plw").value.trim();
+    if(pd||pt||pw)c10.plan={date:pd,time:pt,where:pw};else delete c10.plan;
+    planOpen=false;persist();render();return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
   if(el.id==="kgr"){cupAsk='g';render();return}
   if(el.id==="kgy"){var c8=cc();c8.games=[];cupAsk='';persist();render();return}
