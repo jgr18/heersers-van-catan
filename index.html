@@ -93,12 +93,6 @@ main{position:relative;z-index:1}
 .d.w{background:#2e9d4f}.d.s{background:#f2b705}.d.t{background:#d32f2f}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:10px}
 .leg .d{width:12px;height:12px;border-width:1px;margin-right:5px;vertical-align:middle}
-.rx{padding:0 0 8px 14px;font-size:.88rem}
-.rx .r{display:flex;gap:6px;align-items:baseline;padding:2px 0}
-.rx .r small{color:var(--mute)}
-.em{background:none;border:2px solid var(--line);border-radius:10px;font-size:1.3rem;padding:2px 8px;margin:0 4px 4px 0;cursor:pointer}
-.em.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc2) 35%,transparent)}
-.rxf input{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -113,7 +107,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,R=[],reactOk=false,reactOpen='',rxEmoji='',rxText='',rxName='',EM=['👍','😂','😮','😡','🎉','💀','🍀','🎲'],grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -148,24 +142,13 @@ function saveCode(code){
     if(r.error){sync("Opslaan mislukt: "+r.error.message);return}
     vcodeAdmin=code;codeAsk=false;render()});
 }
-try{rxName=localStorage.getItem('catan_name')||''}catch(e){}
-function composing(){var a=document.activeElement;return !!(reactOpen&&a&&/^rx[tn]$/.test(a.id||""))}
-function loadReacts(){
-  if(!sb||!(viewer||edit))return;
-  var p=viewer?sb.rpc("get_reactions_by_code",{p_code:vcode}):sb.from("reactions").select("*").order("id");
-  p.then(function(r){
-    if(r.error){reactOk=false;return}
-    var d=r.data||[];
-    R=viewer?d:d.map(function(x){return {id:x.id,comp:x.comp_id,game:x.game_id,name:x.name,emoji:x.emoji,body:x.body,at:x.created_at}});
-    reactOk=true;if(!composing())render()});
-}
 function loadViewer(){
   if(!viewer)return;
   sb.rpc("get_league_by_code",{p_code:vcode}).then(function(r){
     if(!viewer)return;
     if(r.error){sync("Laden mislukt: "+r.error.message);return}
     if(!r.data){stopViewer("Deze toegangscode klopt niet (meer).");return}
-    S=r.data.comps?r.data:{comps:[]};sync("Alleen kijken. De stand ververst elke halve minuut.");loaded=true;if(!composing())render();loadReacts()});
+    S=r.data.comps?r.data:{comps:[]};sync("Alleen kijken. De stand ververst elke halve minuut.");loaded=true;render()});
 }
 function startViewer(code){
   vcode=code;viewer=true;sess=null;access=true;edit=false;
@@ -267,7 +250,6 @@ function dealerBox(c){
   return h+'</div>';
 }
 function render(){
-  var ti=$("rxt"),ni=$("rxn");if(ti)rxText=ti.value;if(ni)rxName=ni.value;
   if(!sess&&!viewer){$("tabs").innerHTML="";$("view").innerHTML=loginCard();$("sync").textContent="";$("who").innerHTML="";if(loginMsg){$("vce").textContent=loginMsg;loginMsg=""}return}
   if(!access){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><h2>Geen beheerrechten</h2><p>Dit account is geen beheerder. Meekijken kan met een toegangscode: log uit en vul de code in.</p></div>';$("sync").textContent="";return}
   if(!S.comps.length&&edit&&!beker)addOpen=true;
@@ -326,7 +308,7 @@ function compView(c){
   if(!c.games.length)h+='<small>Nog geen potjes.</small>';
   c.games.slice().reverse().forEach(function(g,i){
     var num=c.games.length-i,w=c.players.filter(function(p){return place(c,g,p)===1}),l=pool(c,g);
-    h+='<div style="border-bottom:1px solid var(--line)"><div class="g" style="border:0;padding-bottom:3px"><span><b>'+num+'.</b> '+cnl(c,w,"")+' wint<br><small>Laatste: '+cnl(c,l," en ")+(g.dice?' · gedobbeld: '+cn(c,g.dice):'')+' · '+esc(g.date)+'</small></span>'+(edit&&i===0?'<button class="lnk" data-del="'+g.id+'">Verwijder</button>':'')+'</div>'+reactHtml(c,g)+'</div>';
+    h+='<div style="border-bottom:1px solid var(--line)"><div class="g" style="border:0;padding-bottom:3px"><span><b>'+num+'.</b> '+cnl(c,w,"")+' wint<br><small>Laatste: '+cnl(c,l," en ")+(g.dice?' · gedobbeld: '+cn(c,g.dice):'')+' · '+esc(g.date)+'</small></span>'+(edit&&i===0?'<button class="lnk" data-del="'+g.id+'">Verwijder</button>':'')+'</div>'+'</div>';
   });
   h+='</div>';
   h+=cupBox(c,s);
@@ -342,15 +324,6 @@ function cupCounts(c,s){
   return {m:m,raw:raw,ss:ss};
 }
 function baseSum(c){var t=0,b=c.cupBase||{};Object.keys(b).forEach(function(k){t+=b[k]});return t}
-function reactHtml(c,g){
-  if(!reactOk)return '';
-  var rs=R.filter(function(x){return x.comp===c.id&&x.game===g.id}),h='<div class="rx">';
-  rs.forEach(function(x){h+='<div class="r"><span style="font-size:1.2rem">'+esc(x.emoji||'💬')+'</span><span><small>'+esc(x.name)+'</small></span>'+(edit?'<button class="lnk" data-rxdel="'+x.id+'" title="Verwijder reactie">×</button>':'')+'</div>'});
-  if(reactOpen===g.id){
-    h+='<div class="rxf" style="margin-top:6px"><div>'+EM.map(function(e){return '<button class="em'+(rxEmoji===e?' on':'')+'" data-em="'+e+'">'+e+'</button>'}).join('')+'</div><input id="rxn" maxlength="20" placeholder="Je naam" value="'+attr(rxName)+'"><div class="err" id="rxe"></div><button class="pri" id="rxs">Plaatsen</button> <button class="lnk" id="rxc">Annuleren</button></div>';
-  }else h+='<button class="lnk" data-rx="'+g.id+'">💬 Reageer</button>';
-  return h+'</div>';
-}
 function graphSvg(c,src){
   var gs=src.games,pl=c.players,W=340,H=220,L=30,R=12,T=10,B=26,cum={},mx=1,ps={players:pl,pts:src.pts},n=gs.length;
   pl.forEach(function(p){cum[p]=[0]});
@@ -433,7 +406,7 @@ document.addEventListener("click",function(e){
     });
     return}
   if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;reactOpen='';delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
   if(!edit)return;
   if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
   if(el.id==="cr"){codeAsk=true;render();return}
@@ -442,21 +415,6 @@ document.addEventListener("click",function(e){
     var l=$("cl").value,CE=$("ce");
     if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(l).then(function(){CE.textContent="Link gekopieerd."},function(){$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."})}
     else{$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."}
-    return}
-  if(el.dataset.rx){reactOpen=el.dataset.rx;render();return}
-  if(el.dataset.em){rxEmoji=rxEmoji===el.dataset.em?'':el.dataset.em;document.querySelectorAll("[data-em]").forEach(function(b){b.classList.toggle("on",b.dataset.em===rxEmoji)});return}
-  if(el.id==="rxc"){reactOpen='';render();return}
-  if(el.dataset.rxdel){sb.from("reactions").delete().eq("id",+el.dataset.rxdel).then(function(){loadReacts()});return}
-  if(el.id==="rxs"){
-    var n7=$("rxn").value.trim(),E7=$("rxe");
-    if(!n7){E7.textContent="Vul je naam in.";return}
-    if(!rxEmoji){E7.textContent="Kies een emoji.";return}
-    el.disabled=true;
-    sb.rpc("add_reaction",{p_code:viewer?vcode:null,p_comp:cur,p_game:reactOpen,p_name:n7,p_emoji:rxEmoji,p_body:''}).then(function(r){
-      el.disabled=false;
-      if(r.error){E7.textContent="Plaatsen mislukt: "+r.error.message;return}
-      try{localStorage.setItem("catan_name",n7)}catch(e){}
-      rxName=n7;rxEmoji="";reactOpen="";loadReacts();render()});
     return}
   if(el.dataset.gr){grafOpen=true;render();window.scrollTo(0,0);return}
   if(el.id==="kgt"){grafOpen=false;render();return}
@@ -529,7 +487,7 @@ function start(session){
     return sb.from("league").select("data").eq("id",1).maybeSingle().then(function(r){
       if(r.error){sync("Laden mislukt: "+r.error.message)}
       else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync("Je beheert deze stand.")}
-      loaded=true;render();loadReacts();clearInterval(pollT);pollT=setInterval(loadReacts,30000);
+      loaded=true;render();
     });
   });
 }
