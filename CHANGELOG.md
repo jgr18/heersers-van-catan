@@ -2,6 +2,10 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.1
+
+- Seizoensarchief toont nu de volledige tabel per seizoen: punten, gespeeld, W, G en V. Seizoenen die zijn afgesloten zonder bewaarde potjes tonen een streepje bij G en V.
+
 ## v1.0
 
 Eerste volledige versie.

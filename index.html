@@ -103,7 +103,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.0</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.1</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -403,8 +403,10 @@ function archiefBox(c){
   ar.forEach(function(x){
     var t='Seizoen '+(x.nr+off)+' · 🏆 '+cn(c,x.champ);
     if(!x.stand){h+='<div class="g"><span>'+t+'</span></div>';return}
-    h+='<details style="border-bottom:1px solid var(--line);padding:7px 0"><summary style="cursor:pointer">'+t+'</summary><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th></tr>';
-    x.stand.forEach(function(r,i){h+='<tr class="'+pc(c,r.n).trim()+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(r.n)+'</td><td class="p">'+r.pt+'</td><td>'+r.g+'</td><td>'+r.w+'</td></tr>'});
+    h+='<details style="border-bottom:1px solid var(--line);padding:7px 0"><summary style="cursor:pointer">'+t+'</summary><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
+    var rows=x.stand;
+    if(x.games&&x.games.length&&x.pts)rows=stand({players:c.players,pts:x.pts,games:x.games});
+    rows.forEach(function(r,i){h+='<tr class="'+pc(c,r.n).trim()+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(r.n)+'</td><td class="p">'+r.pt+'</td><td>'+r.g+'</td><td>'+r.w+'</td><td>'+(r.d===undefined?'–':r.d)+'</td><td>'+(r.v===undefined?'–':r.v)+'</td></tr>'});
     h+='</table></div>'+(x.games&&x.games.length?graphSvg(c,{games:x.games,pts:x.pts}):'')+'</details>';
   });
   return h+'</div>';
