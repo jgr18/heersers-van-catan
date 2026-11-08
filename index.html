@@ -107,7 +107,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,members=[],sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -121,6 +121,15 @@ function authMsg(e){var m=(e.message||"").toLowerCase();
   if(m.indexOf("signups not allowed")>-1)return "Nieuwe accounts zijn uitgeschakeld.";
   return e.message||"Er ging iets mis."}
 function loginCard(){return '<div class="card"><h2>Inloggen</h2><p><input id="em" type="email" autocomplete="username" placeholder="E-mailadres"></p><p><input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord (minstens 6 tekens)"></p><div class="err" id="ae"></div><button class="pri" id="li">Inloggen</button><p style="text-align:center"><button class="lnk" id="su">Nog geen account? Maak er een aan</button></p></div>'}
+function accessView(){
+  var h='<div class="card"><h2>👥 Wie mag meekijken</h2><p><small>Alleen deze e-mailadressen zien de stand, nadat ze een account hebben gemaakt. Jij hebt altijd toegang.</small></p>';
+  if(!members.length)h+='<p><small>Nog niemand toegevoegd.</small></p>';
+  members.forEach(function(m){h+='<div class="g"><span>'+esc(m)+'</span><button class="lnk" data-rm="'+attr(m)+'">Verwijder</button></div>'});
+  return h+'<p><input id="mm" type="email" placeholder="E-mailadres van een vriend"></p><div class="err" id="me"></div><button class="pri" id="ma">Toevoegen</button></div>';
+}
+function loadMembers(){
+  sb.from("members").select("email").order("email").then(function(r){members=r.data?r.data.map(function(x){return x.email}):[];if(r.error)sync("Laden mislukt: "+r.error.message);render()});
+}
 function persist(){
   if(!sb||!edit)return;
   sb.from("league").upsert({id:1,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()}).then(function(r){if(r.error)sync("Opslaan mislukt: "+r.error.message)});
@@ -187,14 +196,17 @@ function dealerBox(c){
 }
 function render(){
   if(!sess){$("tabs").innerHTML="";$("view").innerHTML=loginCard();$("sync").textContent="";$("who").innerHTML="";return}
+  if(!access){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><h2>Wacht op toegang</h2><p>Je account is aangemaakt, maar je bent nog niet toegevoegd. Vraag de beheerder om toegang en ververs daarna deze pagina.</p></div>';$("sync").textContent="";return}
   if(!S.comps.length&&edit&&!beker)addOpen=true;
   if(cur&&!S.comps.some(function(c){return c.id===cur}))cur=null;
   if(!cur&&S.comps.length)cur=S.comps[0].id;
-  var t=S.comps.map(function(c){return '<button class="tab'+(!beker&&!addOpen&&c.id===cur?' on':'')+'" data-t="'+c.id+'">'+esc(c.name)+'</button>'}).join("");
-  if(edit)t+='<button class="tab'+(addOpen&&!beker?' on':'')+'" data-t="+">+ Nieuw</button>';
+  var t=S.comps.map(function(c){return '<button class="tab'+(!beker&&!addOpen&&!accOpen&&c.id===cur?' on':'')+'" data-t="'+c.id+'">'+esc(c.name)+'</button>'}).join("");
+  if(edit)t+='<button class="tab'+(addOpen&&!beker&&!accOpen?' on':'')+'" data-t="+">+ Nieuw</button>';
+  if(edit)t+='<button class="tab'+(accOpen?' on':'')+'" data-t="A">👥 Toegang</button>';
   $("tabs").innerHTML=t;
   var h="";
-  if(beker)h=bekerView();
+  if(accOpen&&edit)h=accessView();
+  else if(beker)h=bekerView();
   else if(addOpen&&edit)h=newForm();
   else{var c=cc();h=c?compView(c):'<div class="card">Nog geen competities.</div>'}
   $("view").innerHTML=h;
@@ -271,8 +283,14 @@ document.addEventListener("click",function(e){
     });
     return}
   if(el.id==="lo"){sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;beker=t==="B";addOpen=t==="+";if(!beker&&!addOpen)cur=t;render();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadMembers();return}
   if(!edit)return;
+  if(el.id==="ma"){
+    var em2=$("mm").value.trim().toLowerCase(),ME=$("me");
+    if(!/^\S+@\S+\.\S+$/.test(em2)){ME.textContent="Vul een geldig e-mailadres in.";return}
+    sb.from("members").upsert({email:em2},{onConflict:"email",ignoreDuplicates:true}).then(function(r){if(r.error){ME.textContent="Opslaan mislukt: "+r.error.message;return}loadMembers()});
+    return}
+  if(el.dataset.rm){sb.from("members").delete().eq("email",el.dataset.rm).then(function(r){if(r.error){sync("Verwijderen mislukt: "+r.error.message);return}loadMembers()});return}
   if(el.dataset.set){setOpen=true;render();return}
   if(el.id==="sb"){setOpen=false;delAsk=false;render();return}
   if(el.id==="ss"){
@@ -321,20 +339,24 @@ var SB_URL="https://jofjhzqijapwvmettuog.supabase.co",SB_KEY="sb_publishable_e_u
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&(e.target.id==="pw"||e.target.id==="em")){var b=$("li");if(b)b.click()}});
 function start(session){
   sess=session;
-  if(!session){edit=false;S={comps:[]};if(chan){sb.removeChannel(chan);chan=null}render();return}
+  if(!session){edit=false;access=false;accOpen=false;members=[];S={comps:[]};if(chan){sb.removeChannel(chan);chan=null}render();return}
   $("who").innerHTML='<button class="lnk" id="lo">Uitloggen ('+esc(session.user.email||"")+')</button>';
   sb.from("admins").select("user_id").eq("user_id",session.user.id).maybeSingle().then(function(a){
     edit=!!(a&&a.data);
-    return sb.from("league").select("data").eq("id",1).maybeSingle();
-  }).then(function(r){
-    if(r.error){sync("Laden mislukt: "+r.error.message)}
-    else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync(edit?"Je beheert deze stand. Vrienden zien wijzigingen direct.":"Alleen kijken: de stand wordt live bijgewerkt.")}
-    loaded=true;render();
-    if(!chan){chan=sb.channel("league").on("postgres_changes",{event:"*",schema:"public",table:"league"},function(p){
-      if(edit||!p.new||!p.new.data)return;
-      S=p.new.data.comps?p.new.data:{comps:[]};
-      var ae=document.activeElement;if(ae&&(ae.tagName==="SELECT"||ae.tagName==="INPUT"))return;
-      render()}).subscribe()}
+    return sb.rpc("has_access");
+  }).then(function(h){
+    access=!!(h&&h.data);
+    if(!access){loaded=true;render();return}
+    return sb.from("league").select("data").eq("id",1).maybeSingle().then(function(r){
+      if(r.error){sync("Laden mislukt: "+r.error.message)}
+      else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync(edit?"Je beheert deze stand. Vrienden zien wijzigingen direct.":"Alleen kijken: de stand wordt live bijgewerkt.")}
+      loaded=true;render();
+      if(!chan){chan=sb.channel("league").on("postgres_changes",{event:"*",schema:"public",table:"league"},function(p){
+        if(edit||!p.new||!p.new.data)return;
+        S=p.new.data.comps?p.new.data:{comps:[]};
+        var ae=document.activeElement;if(ae&&(ae.tagName==="SELECT"||ae.tagName==="INPUT"))return;
+        render()}).subscribe()}
+    });
   });
 }
 if(!window.supabase){$("view").innerHTML='<div class="card">De verbinding met de database kon niet worden geladen. Controleer je internetverbinding en ververs de pagina.</div>'}
