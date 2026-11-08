@@ -107,7 +107,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -214,17 +214,22 @@ function settingsView(c){
   c.players.forEach(function(p,i){h+='<div class="row"><input id="sp'+i+'" value="'+attr(p)+'"><select id="sk'+i+'">'+opt(c.colors&&c.colors[p])+'</select></div>'});
   h+='<p><small>Punten per plek</small></p>';
   for(var q=1;q<=c.players.length;q++)h+='<div class="row"><label>'+(q===1?'Winnaar':q+'e plaats')+'</label><input type="number" min="0" max="99" step="1" inputmode="numeric" id="pt'+(q-1)+'" value="'+pts(c,q)+'" style="max-width:100px"></div>';
+  h+='<p style="text-align:center"><button class="lnk" id="kbm">🏆 Bekerstand beheren…</button></p>';
+  return h+'<div class="err" id="se"></div><button class="pri" id="ss">Opslaan</button><p style="text-align:center"><button class="lnk" id="sb">Terug zonder opslaan</button></p></div>'+(delAsk?'<div class="card" style="text-align:center"><p><b>Weet je zeker dat je deze competitie met alle uitslagen en bekers wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</b></p><button class="pri" id="dy">Ja, verwijderen</button><p><button class="lnk" id="dn">Annuleren</button></p></div>':'<div style="text-align:center"><button class="lnk" id="dc">Competitie verwijderen</button></div>');
+}
+function cupAdminView(c){
+  var h='<div class="card"><h2>🏆 Bekerstand beheren</h2>';
   var cu=cupCounts(c,status(c,stand(c)));
   h+='<p><small>Beker (aantal gewonnen bekers)</small></p>';
   if(cupAsk==='a'){
     var tot=0;h+=c.players.map(function(p){tot+=cupPend[p];return '<div>'+cn(c,p)+': <b>'+cupPend[p]+'</b></div>'}).join('');
-    h+='<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Let op: dit is definitief.</b></p><p>Je overschrijft de huidige bekerstand. Dit kan <b>niet meer ongedaan</b> worden gemaakt en de <b>historie van eerdere seizoenen verdwijnt</b>. De telling gaat verder vanaf deze stand. Het volgende seizoen wordt dan <b>seizoen '+(tot+1)+'</b>.</p><button class="pri" id="cay">Definitief opslaan</button> <button class="lnk" id="crn">Annuleren</button></div>';
+    h+='<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Let op: dit is definitief.</b></p><p>Je overschrijft de huidige bekerstand. Dit kan <b>niet meer ongedaan</b> worden gemaakt en de <b>historie van eerdere seizoenen verdwijnt</b>. De telling gaat verder vanaf deze stand. Het volgende seizoen wordt dan <b>seizoen '+(tot+1)+'</b>.</p><button class="pri" id="kbj">Definitief opslaan</button> <button class="lnk" id="kbn">Annuleren</button></div>';
   }else{
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><input type="number" min="0" max="999" step="1" inputmode="numeric" id="cu'+i+'" value="'+cu.m[p]+'" style="max-width:100px"></div>'});
-    h+='<div class="err" id="ce"></div><p><button class="pri" id="cadj">Beker aanpassen</button></p>';
-    h+=cupAsk==='r'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle bekers op 0 zetten?</b> Dit kan niet meer ongedaan worden gemaakt en de historie van eerdere seizoenen verdwijnt. Het volgende seizoen wordt weer seizoen 1.</p><button class="pri" id="cry">Definitief op 0 zetten</button> <button class="lnk" id="crn">Annuleren</button></div>':'<p><button class="lnk" id="cr">Beker op 0 zetten</button></p>';
+    h+='<div class="err" id="ce"></div><p><button class="pri" id="kba">Beker aanpassen</button></p>';
+    h+=cupAsk==='r'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle bekers op 0 zetten?</b> Dit kan niet meer ongedaan worden gemaakt en de historie van eerdere seizoenen verdwijnt. Het volgende seizoen wordt weer seizoen 1.</p><button class="pri" id="kby">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kbr">Beker op 0 zetten</button></p>';
   }
-  return h+'<div class="err" id="se"></div><button class="pri" id="ss">Opslaan</button><p style="text-align:center"><button class="lnk" id="sb">Terug zonder opslaan</button></p></div>'+(delAsk?'<div class="card" style="text-align:center"><p><b>Weet je zeker dat je deze competitie met alle uitslagen en bekers wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</b></p><button class="pri" id="dy">Ja, verwijderen</button><p><button class="lnk" id="dn">Annuleren</button></p></div>':'<div style="text-align:center"><button class="lnk" id="dc">Competitie verwijderen</button></div>');
+  return h+'<p style="text-align:center"><button class="lnk" id="kbt">Terug naar instellingen</button></p></div>';
 }
 function colorsCard(c){
   var h='<div class="card"><h2>Kleuren</h2>';
@@ -280,7 +285,7 @@ function newForm(){
   return h+'<div class="err" id="ne"></div><button class="pri" id="mk">Competitie starten</button></div>';
 }
 function compView(c){
-  if(setOpen&&edit)return settingsView(c);
+  if(setOpen&&edit)return cupScr?cupAdminView(c):settingsView(c);
   var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
   h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
@@ -342,7 +347,7 @@ document.addEventListener("click",function(e){
     });
     return}
   if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
   if(!edit)return;
   if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
   if(el.id==="cr"){codeAsk=true;render();return}
@@ -352,8 +357,8 @@ document.addEventListener("click",function(e){
     if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(l).then(function(){CE.textContent="Link gekopieerd."},function(){$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."})}
     else{$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."}
     return}
-  if(el.dataset.set){setOpen=true;render();return}
-  if(el.id==="sb"){setOpen=false;delAsk=false;render();return}
+  if(el.dataset.set){setOpen=true;cupScr=false;cupAsk='';render();return}
+  if(el.id==="sb"){setOpen=false;cupScr=false;delAsk=false;render();return}
   if(el.id==="ss"){
     var c4=cc(),E4=$("se"),nm=[],col={},i4,nn=$("sn").value.trim();
     if(!nn){E4.textContent="Geef de competitie een naam.";return}
@@ -384,15 +389,17 @@ document.addEventListener("click",function(e){
     if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
         c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
-  if(el.id==="cr"){cupAsk='r';render();return}
-  if(el.id==="crn"){cupAsk='';cupPend=null;render();return}
-  if(el.id==="cadj"){
+  if(el.id==="kbm"){cupScr=true;cupAsk='';cupPend=null;render();return}
+  if(el.id==="kbt"){cupScr=false;cupAsk='';cupPend=null;render();return}
+  if(el.id==="kbr"){cupAsk='r';render();return}
+  if(el.id==="kbn"){cupAsk='';cupPend=null;render();return}
+  if(el.id==="kba"){
     var c6=cc(),pend={},E6=$("ce");
     for(var j6=0;j6<c6.players.length;j6++){var v6=parseInt($("cu"+j6).value,10);if(isNaN(v6)||v6<0||v6>999){E6.textContent="Geef bij elke speler een aantal bekers van 0 tot 999.";return}pend[c6.players[j6]]=v6}
     cupPend=pend;cupAsk='a';render();return}
-  if(el.id==="cry"||el.id==="cay"){
+  if(el.id==="kby"||el.id==="kbj"){
     var c5=cc(),s5=status(c5,stand(c5)),cu5=cupCounts(c5,s5),nb5={};
-    c5.players.forEach(function(p5){nb5[p5]=(el.id==="cay"?cupPend[p5]:0)-cu5.raw[p5]});
+    c5.players.forEach(function(p5){nb5[p5]=(el.id==="kbj"?cupPend[p5]:0)-cu5.raw[p5]});
     c5.cupBase=nb5;c5.cupHide=(c5.seasons||[]).length+(s5.d?1:0);cupAsk='';cupPend=null;persist();render();return}
   if(el.id==="dc"){delAsk=true;render();return}
   if(el.id==="dn"){delAsk=false;render();return}
