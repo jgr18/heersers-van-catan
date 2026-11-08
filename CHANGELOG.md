@@ -2,9 +2,14 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.2
+
+- Seizoensgrafiek: op de horizontale as staat nu "Duels" en op de verticale as "Punten".
+
 ## v1.1
 
 - Seizoensarchief toont nu de volledige tabel per seizoen: punten, gespeeld, W, G en V. Seizoenen die zijn afgesloten zonder bewaarde potjes tonen een streepje bij G en V.
+- In de hele app heet een potje nu een duel, bijvoorbeeld "Gespeelde duels" en "Uitslag duel 5".
 
 ## v1.0
 

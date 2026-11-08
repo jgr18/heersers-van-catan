@@ -103,7 +103,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.1</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.2</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -174,9 +174,9 @@ function stand(c){
 }
 function status(c,st){
   var n=c.games.length,T=10;
-  if(n<T)return {t:"Potje "+(n+1)+" van "+T,d:false};
+  if(n<T)return {t:"Duel "+(n+1)+" van "+T,d:false};
   var top=st[0].pt,lead=st.filter(function(x){return x.pt===top});
-  if(lead.length>1)return {t:"Gelijke stand na "+n+" potjes: speel potje "+(n+1),d:false};
+  if(lead.length>1)return {t:"Gelijke stand na "+n+" duels: speel duel "+(n+1),d:false};
   return {t:"🏆 Kampioen: "+lead[0].n+" met "+top+" punten",d:true,w:lead[0].n};
 }
 function pool(c,g){
@@ -193,13 +193,13 @@ function resultOptions(c){
   });
 }
 function formBox(c,st){
-  var gs=c.games.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 potjes)</small></h2>';
+  var gs=c.games.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 duels)</small></h2>';
   st.forEach(function(x){
     h+='<div class="frow"><span>'+cn(c,x.n)+'</span><span class="dots">';
     for(var i=0;i<5;i++){
       var g=i<off?null:gs[i-off],pl=g?place(c,g,x.n):0;
       if(!pl)h+='<i class="d e"></i>';
-      else h+='<i class="d '+(pl===1?'w':pl===2?'s':'t')+'" title="Potje '+(c.games.length-gs.length+(i-off)+1)+': '+pl+'e plaats"></i>';
+      else h+='<i class="d '+(pl===1?'w':pl===2?'s':'t')+'" title="Duel '+(c.games.length-gs.length+(i-off)+1)+': '+pl+'e plaats"></i>';
     }
     h+='</span></div>';
   });
@@ -231,7 +231,7 @@ function cupAdminView(c){
     h+=cupAsk==='r'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle bekers op 0 zetten?</b> Dit kan niet meer ongedaan worden gemaakt en de historie van eerdere seizoenen verdwijnt. Het volgende seizoen wordt weer seizoen 1.</p><button class="pri" id="kby">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kbr">Beker op 0 zetten</button></p>';
   }
   h+='<p><small>Huidige seizoensstand</small></p>';
-  h+=cupAsk==='g'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle potjes van dit seizoen verwijderen?</b> De stand, de vorm en de reeksen beginnen weer bij 0. Dit kan niet meer ongedaan worden gemaakt. De bekers en het seizoensarchief blijven staan.</p><button class="pri" id="kgy">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kgr">Seizoensstand op 0 zetten</button></p>';
+  h+=cupAsk==='g'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle duels van dit seizoen verwijderen?</b> De stand, de vorm en de reeksen beginnen weer bij 0. Dit kan niet meer ongedaan worden gemaakt. De bekers en het seizoensarchief blijven staan.</p><button class="pri" id="kgy">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kgr">Seizoensstand op 0 zetten</button></p>';
   return h+'<p style="text-align:center"><button class="lnk" id="kbt">Terug naar instellingen</button></p></div>';
 }
 function colorsCard(c){
@@ -256,9 +256,9 @@ function planHtml(c){
   return h;
 }
 function dealerBox(c){
-  if(!c.games.length)return '<div class="card"><h2>🃏 Delen</h2>Potje 1: onderling bepalen.'+planHtml(c)+'</div>';
-  var g=c.games[c.games.length-1],p=pool(c,g),n=c.games.length,h='<div class="card"><h2>🃏 Delen potje '+(n+1)+'</h2>';
-  if(p.length===1)h+='<b>'+cn(c,p[0])+'</b> deelt (laatste in potje '+n+').';
+  if(!c.games.length)return '<div class="card"><h2>🃏 Delen</h2>Duel 1: onderling bepalen.'+planHtml(c)+'</div>';
+  var g=c.games[c.games.length-1],p=pool(c,g),n=c.games.length,h='<div class="card"><h2>🃏 Delen duel '+(n+1)+'</h2>';
+  if(p.length===1)h+='<b>'+cn(c,p[0])+'</b> deelt (laatste in duel '+n+').';
   else if(g.dice&&p.indexOf(g.dice)>-1)h+='<b>'+cn(c,g.dice)+'</b> deelt: gedobbeld tussen '+cnl(c,p," en ")+'.';
   else{h+='Gelijk laatste: '+cnl(c,p," en ")+' dobbelen.';
     h+=edit?'<p><button class="pri" data-dice="1">🎲 Dobbel</button></p>':'<p><small>Wacht op de dobbelworp.</small></p>'}
@@ -319,7 +319,7 @@ function compView(c){
   if(setOpen&&edit)return cupScr?cupAdminView(c):settingsView(c);
   var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
   var ew=edit&&!c.earlyNo?earlyWin(c,st,s):null;
-  if(ew)h+='<div class="card" style="border:2px solid var(--acc)"><h2>🏆 Seizoen beslist</h2><p><b>'+cn(c,ew.w)+'</b> kan niet meer worden ingehaald. Er '+(ew.r===1?'is nog 1 potje':'zijn nog '+ew.r+' potjes')+' te spelen. '+cn(c,ew.w)+' krijgt de beker.</p><button class="pri" id="ey">Seizoen opslaan en nieuw seizoen starten</button><p style="text-align:center;margin:8px 0 0"><button class="lnk" id="en">Nog doorspelen</button></p></div>';
+  if(ew)h+='<div class="card" style="border:2px solid var(--acc)"><h2>🏆 Seizoen beslist</h2><p><b>'+cn(c,ew.w)+'</b> kan niet meer worden ingehaald. Er '+(ew.r===1?'is nog 1 duel':'zijn nog '+ew.r+' duels')+' te spelen. '+cn(c,ew.w)+' krijgt de beker.</p><button class="pri" id="ey">Seizoen opslaan en nieuw seizoen starten</button><p style="text-align:center;margin:8px 0 0"><button class="lnk" id="en">Nog doorspelen</button></p></div>';
   h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
   st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td><td>'+x.d+'</td><td>'+x.v+'</td></tr>'});
@@ -330,12 +330,12 @@ function compView(c){
   if(s.d&&edit)h+='<div class="card"><button class="pri" id="ns">Start nieuw seizoen</button></div>';
   if(!s.d&&edit){
     var o=resultOptions(c);
-    h+='<div class="card"><h2>Uitslag potje '+(c.games.length+1)+'</h2>';
+    h+='<div class="card"><h2>Uitslag duel '+(c.games.length+1)+'</h2>';
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><select data-p="'+i+'"><option value="">Kies...</option>'+o.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select></div>'});
     h+='<div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
   }
-  h+='<div class="card"><h2>Gespeelde potjes</h2>';
-  if(!c.games.length)h+='<small>Nog geen potjes.</small>';
+  h+='<div class="card"><h2>Gespeelde duels</h2>';
+  if(!c.games.length)h+='<small>Nog geen duels.</small>';
   c.games.slice().reverse().forEach(function(g,i){
     var num=c.games.length-i,w=c.players.filter(function(p){return place(c,g,p)===1}),l=pool(c,g);
     h+='<div style="border-bottom:1px solid var(--line)"><div class="g" style="border:0;padding-bottom:3px"><span><b>'+num+'.</b> '+cnl(c,w,"")+' wint<br><small>Laatste: '+cnl(c,l," en ")+(g.dice?' · gedobbeld: '+cn(c,g.dice):'')+' · '+esc(g.date)+'</small></span>'+(edit&&i===0?'<button class="lnk" data-del="'+g.id+'">Verwijder</button>':'')+'</div>'+'</div>';
@@ -355,16 +355,17 @@ function cupCounts(c,s){
 }
 function baseSum(c){var t=0,b=c.cupBase||{};Object.keys(b).forEach(function(k){t+=b[k]});return t}
 function graphSvg(c,src){
-  var gs=src.games,pl=c.players,W=340,H=220,L=30,R=12,T=10,B=26,cum={},mx=1,ps={players:pl,pts:src.pts},n=gs.length;
+  var gs=src.games,pl=c.players,W=340,H=240,L=42,R=12,T=10,B=44,cum={},mx=1,ps={players:pl,pts:src.pts},n=gs.length;
   pl.forEach(function(p){cum[p]=[0]});
   gs.forEach(function(g){pl.forEach(function(p){var q=place(ps,g,p),a=cum[p];a.push(a[a.length-1]+(q?pts(ps,q):0))})});
   pl.forEach(function(p){mx=Math.max(mx,cum[p][cum[p].length-1])});
   var step=mx<=10?2:mx<=25?5:mx<=60?10:20,ym=Math.ceil(mx/step)*step;
   var X=function(i){return L+(n?i*(W-L-R)/n:0)},Y=function(v){return T+(H-T-B)*(1-v/ym)},v,i;
-  var o='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" role="img" aria-label="Puntenstand per potje">';
+  var o='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" role="img" aria-label="Puntenstand per duel">';
   for(v=0;v<=ym;v+=step)o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(L-5)+'" y="'+(Y(v)+3)+'" text-anchor="end" font-size="10" style="fill:var(--mute)">'+v+'</text>';
   var every=n>14?2:1;
-  for(i=1;i<=n;i++)if(i%every===0||i===n)o+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" style="fill:var(--mute)">'+i+'</text>';
+  for(i=1;i<=n;i++)if(i%every===0||i===n)o+='<text x="'+X(i)+'" y="'+(H-24)+'" text-anchor="middle" font-size="10" style="fill:var(--mute)">'+i+'</text>';
+  o+='<text x="'+((L+W-R)/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--mute)">Duels</text><text transform="translate(11 '+((T+H-B)/2)+') rotate(-90)" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--mute)">Punten</text>';
   pl.forEach(function(p){
     var col=c.colors&&c.colors[p]?'var(--c-'+c.colors[p]+')':'var(--ink)',pts_=cum[p].map(function(y,j){return X(j).toFixed(1)+','+Y(y).toFixed(1)}).join(' ');
     o+='<polyline points="'+pts_+'" fill="none" stroke="rgba(59,42,26,.6)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+pts_+'" fill="none" style="stroke:'+col+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
@@ -374,8 +375,8 @@ function graphSvg(c,src){
   return o;
 }
 function grafView(c){
-  var h='<div class="card"><h2>📈 Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · puntenstand per potje</h2>';
-  h+=c.games.length?graphSvg(c,{games:c.games,pts:c.pts}):'<small>Nog geen potjes gespeeld dit seizoen.</small>';
+  var h='<div class="card"><h2>📈 Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · puntenstand per duel</h2>';
+  h+=c.games.length?graphSvg(c,{games:c.games,pts:c.pts}):'<small>Nog geen duels gespeeld dit seizoen.</small>';
   return h+'<p style="text-align:center"><button class="lnk" id="kgt">Terug naar de stand</button></p></div>';
 }
 function runs(a){var bw=0,bl=0,cw=0,cl=0;a.forEach(function(r){if(r==='W'){cw++;cl=0}else if(r==='L'){cl++;cw=0}else{cw=0;cl=0}bw=Math.max(bw,cw);bl=Math.max(bl,cl)});return {bw:bw,bl:bl,cw:cw,cl:cl}}
