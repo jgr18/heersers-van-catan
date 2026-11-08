@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2b6f94">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -93,6 +93,12 @@ main{position:relative;z-index:1}
 .d.w{background:#2e9d4f}.d.s{background:#f2b705}.d.t{background:#d32f2f}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:10px}
 .leg .d{width:12px;height:12px;border-width:1px;margin-right:5px;vertical-align:middle}
+.rx{padding:0 0 8px 14px;font-size:.88rem}
+.rx .r{display:flex;gap:6px;align-items:baseline;padding:2px 0}
+.rx .r small{color:var(--mute)}
+.em{background:none;border:2px solid var(--line);border-radius:10px;font-size:1.3rem;padding:2px 8px;margin:0 4px 4px 0;cursor:pointer}
+.em.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc2) 35%,transparent)}
+.rxf input{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -107,7 +113,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,R=[],reactOk=false,reactOpen='',rxEmoji='',rxText='',rxName='',EM=['👍','😂','😮','😡','🎉','💀','🍀','🎲'],grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -120,7 +126,56 @@ function authMsg(e){var m=(e.message||"").toLowerCase();
   if(m.indexOf("rate limit")>-1)return "Te veel pogingen. Probeer het over een paar minuten opnieuw.";
   if(m.indexOf("signups not allowed")>-1)return "Nieuwe accounts zijn uitgeschakeld.";
   return e.message||"Er ging iets mis."}
-function loginCard(){return '<div class="card"><h2>Inloggen</h2><p><input id="em" type="email" autocomplete="username" placeholder="E-mailadres"></p><p><input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord (minstens 6 tekens)"></p><div class="err" id="ae"></div><button class="pri" id="li">Inloggen</button><p style="text-align:center"><button class="lnk" id="su">Nog geen account? Maak er een aan</button></p></div>'}
+function normCode(x){return String(x||"").toLowerCase().replace(/[^a-z0-9]/g,"")}
+function fmtCode(c){return c.replace(/(.{4})(?=.)/g,"$1-")}
+function genCode(){var al="abcdefghjkmnpqrstuvwxyz23456789",a=new Uint8Array(24),o="",i;crypto.getRandomValues(a);for(i=0;i<24;i++)o+=al[a[i]%al.length];return o}
+function loginCard(){return '<div class="card"><h2>Meekijken</h2><p><small>Heb je een toegangscode? Vul die hier in.</small></p><p><input id="vcode" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="Toegangscode"></p><div class="err" id="vce"></div><button class="pri" id="vc">Bekijk de stand</button></div><div class="card"><h2>Beheerder</h2><p><input id="em" type="email" autocomplete="username" placeholder="E-mailadres"></p><p><input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord"></p><div class="err" id="ae"></div><button class="pri" id="li">Inloggen</button></div>'}
+function accessView(){
+  var link=vcodeAdmin?location.origin+location.pathname+"?code="+vcodeAdmin:"";
+  var h='<div class="card"><h2>🔑 Toegangscode</h2><p><small>Wie deze code heeft, ziet de stand van alle competities, maar kan niets wijzigen. Deel de code alleen met vrienden.</small></p>';
+  if(!vcodeAdmin)h+='<p><small>Er is nog geen code.</small></p><button class="pri" id="cg">Toegangscode maken</button>';
+  else{
+    h+='<p><small>Code</small><br><input id="cv" readonly value="'+attr(fmtCode(vcodeAdmin))+'" style="font-family:monospace"></p><p><small>Link om te delen</small><br><input id="cl" readonly value="'+attr(link)+'"></p><button class="pri" id="cc">Kopieer link</button><div class="err" id="ce"></div>';
+    h+=codeAsk?'<p><b>Een nieuwe code maakt de oude ongeldig: iedereen moet daarna de nieuwe code invullen. Doorgaan?</b></p><button class="pri" id="cy">Ja, nieuwe code maken</button><p style="text-align:center"><button class="lnk" id="cn">Annuleren</button></p>':'<p style="text-align:center"><button class="lnk" id="cr">Nieuwe code maken (de oude vervalt)</button></p>';
+  }
+  return h+'</div>';
+}
+function loadCode(){
+  sb.from("app_settings").select("view_code").eq("id",1).maybeSingle().then(function(r){if(r.error)sync("Laden mislukt: "+r.error.message);vcodeAdmin=(r.data&&r.data.view_code)||"";render()});
+}
+function saveCode(code){
+  sb.from("app_settings").upsert({id:1,view_code:code}).then(function(r){
+    if(r.error){sync("Opslaan mislukt: "+r.error.message);return}
+    vcodeAdmin=code;codeAsk=false;render()});
+}
+try{rxName=localStorage.getItem('catan_name')||''}catch(e){}
+function composing(){var a=document.activeElement;return !!(reactOpen&&a&&/^rx[tn]$/.test(a.id||""))}
+function loadReacts(){
+  if(!sb||!(viewer||edit))return;
+  var p=viewer?sb.rpc("get_reactions_by_code",{p_code:vcode}):sb.from("reactions").select("*").order("id");
+  p.then(function(r){
+    if(r.error){reactOk=false;return}
+    var d=r.data||[];
+    R=viewer?d:d.map(function(x){return {id:x.id,comp:x.comp_id,game:x.game_id,name:x.name,emoji:x.emoji,body:x.body,at:x.created_at}});
+    reactOk=true;if(!composing())render()});
+}
+function loadViewer(){
+  if(!viewer)return;
+  sb.rpc("get_league_by_code",{p_code:vcode}).then(function(r){
+    if(!viewer)return;
+    if(r.error){sync("Laden mislukt: "+r.error.message);return}
+    if(!r.data){stopViewer("Deze toegangscode klopt niet (meer).");return}
+    S=r.data.comps?r.data:{comps:[]};sync("Alleen kijken. De stand ververst elke halve minuut.");loaded=true;if(!composing())render();loadReacts()});
+}
+function startViewer(code){
+  vcode=code;viewer=true;sess=null;access=true;edit=false;
+  $("who").innerHTML='<button class="lnk" id="lo">Stoppen met meekijken</button>';
+  sync("Laden...");loadViewer();clearInterval(pollT);pollT=setInterval(loadViewer,30000);
+}
+function stopViewer(msg){
+  viewer=false;vcode=null;clearInterval(pollT);try{localStorage.removeItem("catan_code")}catch(e){}
+  S={comps:[]};loginMsg=msg||"";$("who").innerHTML="";render();
+}
 function persist(){
   if(!sb||!edit)return;
   sb.from("league").upsert({id:1,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()}).then(function(r){if(r.error)sync("Opslaan mislukt: "+r.error.message)});
@@ -129,8 +184,8 @@ function defPts(n){return n===3?[3,1,0]:[3,2,1].concat(Array(n-3).fill(0))}
 function pts(c,pl){var t=c.pts&&c.pts.length===c.players.length?c.pts:defPts(c.players.length);return +t[pl-1]||0}
 function place(c,g,p){var r=g.res[p];if(r==null||r==="")return 0;if(/^\d+$/.test(r))return +r;var n=c.players.length;return r==="w"?1:r==="s"?2:r==="t"?3:n}
 function stand(c){
-  var m={};c.players.forEach(function(p){m[p]={n:p,pt:0,w:0,g:0}});
-  c.games.forEach(function(g){c.players.forEach(function(p){var pl=place(c,g,p);if(!pl)return;var x=m[p];x.g++;x.pt+=pts(c,pl);if(pl===1)x.w++})});
+  var m={},lo=pts(c,c.players.length);c.players.forEach(function(p){m[p]={n:p,pt:0,w:0,d:0,v:0,g:0}});
+  c.games.forEach(function(g){c.players.forEach(function(p){var pl=place(c,g,p);if(!pl)return;var x=m[p];x.g++;x.pt+=pts(c,pl);if(pl===1)x.w++;else if(pts(c,pl)===lo)x.v++;else x.d++})});
   return Object.keys(m).map(function(k){return m[k]}).sort(function(a,b){return b.pt-a.pt||b.w-a.w||a.n.localeCompare(b.n)});
 }
 function status(c,st){
@@ -141,8 +196,17 @@ function status(c,st){
   return {t:"🏆 Kampioen: "+lead[0].n+" met "+top+" punten",d:true,w:lead[0].n};
 }
 function pool(c,g){
-  var mx=0;c.players.forEach(function(p){mx=Math.max(mx,place(c,g,p))});
-  return c.players.filter(function(p){return place(c,g,p)===mx});
+  var mn=1e9;c.players.forEach(function(p){var pl=place(c,g,p);if(pl)mn=Math.min(mn,pts(c,pl))});
+  return c.players.filter(function(p){var pl=place(c,g,p);return pl&&pts(c,pl)===mn});
+}
+function resultOptions(c){
+  var n=c.players.length,gs=[],q;
+  for(q=1;q<=n;q++){var v=pts(c,q),l=gs[gs.length-1];if(l&&l.v===v)l.end=q;else gs.push({v:v,start:q,end:q})}
+  return gs.map(function(g,i){
+    var last=i===gs.length-1,val=last?n:g.start;
+    var lab=g.start===1?'Winnaar':last?'Laatste':(g.end>g.start?g.start+'e/'+g.end+'e plaats':g.start+'e plaats');
+    return [String(val),lab+' ('+g.v+')'];
+  });
 }
 function formBox(c,st){
   var gs=c.games.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 potjes)</small></h2>';
@@ -167,7 +231,24 @@ function settingsView(c){
   c.players.forEach(function(p,i){h+='<div class="row"><input id="sp'+i+'" value="'+attr(p)+'"><select id="sk'+i+'">'+opt(c.colors&&c.colors[p])+'</select></div>'});
   h+='<p><small>Punten per plek</small></p>';
   for(var q=1;q<=c.players.length;q++)h+='<div class="row"><label>'+(q===1?'Winnaar':q+'e plaats')+'</label><input type="number" min="0" max="99" step="1" inputmode="numeric" id="pt'+(q-1)+'" value="'+pts(c,q)+'" style="max-width:100px"></div>';
+  h+='<p style="text-align:center"><button class="lnk" id="kbm">🏆 Beker en stand beheren…</button></p>';
   return h+'<div class="err" id="se"></div><button class="pri" id="ss">Opslaan</button><p style="text-align:center"><button class="lnk" id="sb">Terug zonder opslaan</button></p></div>'+(delAsk?'<div class="card" style="text-align:center"><p><b>Weet je zeker dat je deze competitie met alle uitslagen en bekers wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</b></p><button class="pri" id="dy">Ja, verwijderen</button><p><button class="lnk" id="dn">Annuleren</button></p></div>':'<div style="text-align:center"><button class="lnk" id="dc">Competitie verwijderen</button></div>');
+}
+function cupAdminView(c){
+  var h='<div class="card"><h2>🏆 Beker en stand beheren</h2>';
+  var cu=cupCounts(c,status(c,stand(c)));
+  h+='<p><small>Beker (aantal gewonnen bekers)</small></p>';
+  if(cupAsk==='a'){
+    var tot=0;h+=c.players.map(function(p){tot+=cupPend[p];return '<div>'+cn(c,p)+': <b>'+cupPend[p]+'</b></div>'}).join('');
+    h+='<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Let op: dit is definitief.</b></p><p>Je overschrijft de huidige bekerstand. Dit kan <b>niet meer ongedaan</b> worden gemaakt en de <b>historie van eerdere seizoenen verdwijnt</b>. De telling gaat verder vanaf deze stand. Het volgende seizoen wordt dan <b>seizoen '+(tot+1)+'</b>.</p><button class="pri" id="kbj">Definitief opslaan</button> <button class="lnk" id="kbn">Annuleren</button></div>';
+  }else{
+    c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><input type="number" min="0" max="999" step="1" inputmode="numeric" id="cu'+i+'" value="'+cu.m[p]+'" style="max-width:100px"></div>'});
+    h+='<div class="err" id="ce"></div><p><button class="pri" id="kba">Beker aanpassen</button></p>';
+    h+=cupAsk==='r'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle bekers op 0 zetten?</b> Dit kan niet meer ongedaan worden gemaakt en de historie van eerdere seizoenen verdwijnt. Het volgende seizoen wordt weer seizoen 1.</p><button class="pri" id="kby">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kbr">Beker op 0 zetten</button></p>';
+  }
+  h+='<p><small>Huidige seizoensstand</small></p>';
+  h+=cupAsk==='g'?'<div class="card" style="border:2px solid #c0392b"><p><b>⚠️ Alle potjes van dit seizoen verwijderen?</b> De stand, de vorm en de reeksen beginnen weer bij 0. Dit kan niet meer ongedaan worden gemaakt. De bekers en het seizoensarchief blijven staan.</p><button class="pri" id="kgy">Definitief op 0 zetten</button> <button class="lnk" id="kbn">Annuleren</button></div>':'<p><button class="lnk" id="kgr">Seizoensstand op 0 zetten</button></p>';
+  return h+'<p style="text-align:center"><button class="lnk" id="kbt">Terug naar instellingen</button></p></div>';
 }
 function colorsCard(c){
   var h='<div class="card"><h2>Kleuren</h2>';
@@ -186,15 +267,19 @@ function dealerBox(c){
   return h+'</div>';
 }
 function render(){
-  if(!sess){$("tabs").innerHTML="";$("view").innerHTML=loginCard();$("sync").textContent="";$("who").innerHTML="";return}
+  var ti=$("rxt"),ni=$("rxn");if(ti)rxText=ti.value;if(ni)rxName=ni.value;
+  if(!sess&&!viewer){$("tabs").innerHTML="";$("view").innerHTML=loginCard();$("sync").textContent="";$("who").innerHTML="";if(loginMsg){$("vce").textContent=loginMsg;loginMsg=""}return}
+  if(!access){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><h2>Geen beheerrechten</h2><p>Dit account is geen beheerder. Meekijken kan met een toegangscode: log uit en vul de code in.</p></div>';$("sync").textContent="";return}
   if(!S.comps.length&&edit&&!beker)addOpen=true;
   if(cur&&!S.comps.some(function(c){return c.id===cur}))cur=null;
   if(!cur&&S.comps.length)cur=S.comps[0].id;
-  var t=S.comps.map(function(c){return '<button class="tab'+(!beker&&!addOpen&&c.id===cur?' on':'')+'" data-t="'+c.id+'">'+esc(c.name)+'</button>'}).join("");
-  if(edit)t+='<button class="tab'+(addOpen&&!beker?' on':'')+'" data-t="+">+ Nieuw</button>';
+  var t=S.comps.map(function(c){return '<button class="tab'+(!beker&&!addOpen&&!accOpen&&c.id===cur?' on':'')+'" data-t="'+c.id+'">'+esc(c.name)+'</button>'}).join("");
+  if(edit)t+='<button class="tab'+(addOpen&&!beker&&!accOpen?' on':'')+'" data-t="+">+ Nieuw</button>';
+  if(edit)t+='<button class="tab'+(accOpen?' on':'')+'" data-t="A">🔑 Toegang</button>';
   $("tabs").innerHTML=t;
   var h="";
-  if(beker)h=bekerView();
+  if(accOpen&&edit)h=accessView();
+  else if(beker)h=bekerView();
   else if(addOpen&&edit)h=newForm();
   else{var c=cc();h=c?compView(c):'<div class="card">Nog geen competities.</div>'}
   $("view").innerHTML=h;
@@ -220,46 +305,123 @@ function newForm(){
   return h+'<div class="err" id="ne"></div><button class="pri" id="mk">Competitie starten</button></div>';
 }
 function compView(c){
-  if(setOpen&&edit)return settingsView(c);
-  var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1)+' · '+esc(s.t)+'</div>';
-  h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>Winst</th></tr>';
+  if(grafOpen)return grafView(c);
+  if(setOpen&&edit)return cupScr?cupAdminView(c):settingsView(c);
+  var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
+  h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
-  st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td></tr>'});
-  h+='</table></div></div>';
+  st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td><td>'+x.d+'</td><td>'+x.v+'</td></tr>'});
+  h+='</table></div><p style="text-align:center;margin:8px 0 0"><button class="lnk" data-gr="1">📈 Seizoensgrafiek</button></p></div>';
+  if(!s.d)h+=dealerBox(c);
   h+=formBox(c,st);
+  h+=streakBox(c);
   if(s.d&&edit)h+='<div class="card"><button class="pri" id="ns">Start nieuw seizoen</button></div>';
   if(!s.d&&edit){
-    var o=[];for(var q=1;q<=n;q++)o.push([String(q),(q===1?'Winnaar':q===n?'Laatste':q+'e plaats')+' ('+pts(c,q)+')']);
+    var o=resultOptions(c);
     h+='<div class="card"><h2>Uitslag potje '+(c.games.length+1)+'</h2>';
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><select data-p="'+i+'"><option value="">Kies...</option>'+o.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select></div>'});
     h+='<div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
   }
-  if(!s.d)h+=dealerBox(c);
   h+='<div class="card"><h2>Gespeelde potjes</h2>';
   if(!c.games.length)h+='<small>Nog geen potjes.</small>';
   c.games.slice().reverse().forEach(function(g,i){
     var num=c.games.length-i,w=c.players.filter(function(p){return place(c,g,p)===1}),l=pool(c,g);
-    h+='<div class="g"><span><b>'+num+'.</b> '+cnl(c,w,"")+' wint<br><small>Laatste: '+cnl(c,l," en ")+(g.dice?' · gedobbeld: '+cn(c,g.dice):'')+' · '+esc(g.date)+'</small></span>'+(edit&&i===0?'<button class="lnk" data-del="'+g.id+'">Verwijder</button>':'')+'</div>';
+    h+='<div style="border-bottom:1px solid var(--line)"><div class="g" style="border:0;padding-bottom:3px"><span><b>'+num+'.</b> '+cnl(c,w,"")+' wint<br><small>Laatste: '+cnl(c,l," en ")+(g.dice?' · gedobbeld: '+cn(c,g.dice):'')+' · '+esc(g.date)+'</small></span>'+(edit&&i===0?'<button class="lnk" data-del="'+g.id+'">Verwijder</button>':'')+'</div>'+reactHtml(c,g)+'</div>';
   });
   h+='</div>';
   h+=cupBox(c,s);
+  h+=archiefBox(c);
   return h;
 }
-function cupBox(c,s){
-  var ss=(c.seasons||[]).slice(),m={};
+function cupCounts(c,s){
+  var ss=(c.seasons||[]).slice(),m={},raw={},b=c.cupBase||{};
   if(s.d)ss.push({nr:ss.length+1,champ:s.w});
-  c.players.forEach(function(p){m[p]=0});
-  ss.forEach(function(x){m[x.champ]=(m[x.champ]||0)+1});
+  c.players.forEach(function(p){raw[p]=0});
+  ss.forEach(function(x){raw[x.champ]=(raw[x.champ]||0)+1});
+  Object.keys(raw).forEach(function(p){m[p]=raw[p]+(b[p]||0)});
+  return {m:m,raw:raw,ss:ss};
+}
+function baseSum(c){var t=0,b=c.cupBase||{};Object.keys(b).forEach(function(k){t+=b[k]});return t}
+function reactHtml(c,g){
+  if(!reactOk)return '';
+  var rs=R.filter(function(x){return x.comp===c.id&&x.game===g.id}),h='<div class="rx">';
+  rs.forEach(function(x){h+='<div class="r"><span style="font-size:1.2rem">'+esc(x.emoji||'💬')+'</span><span><small>'+esc(x.name)+'</small></span>'+(edit?'<button class="lnk" data-rxdel="'+x.id+'" title="Verwijder reactie">×</button>':'')+'</div>'});
+  if(reactOpen===g.id){
+    h+='<div class="rxf" style="margin-top:6px"><div>'+EM.map(function(e){return '<button class="em'+(rxEmoji===e?' on':'')+'" data-em="'+e+'">'+e+'</button>'}).join('')+'</div><input id="rxn" maxlength="20" placeholder="Je naam" value="'+attr(rxName)+'"><div class="err" id="rxe"></div><button class="pri" id="rxs">Plaatsen</button> <button class="lnk" id="rxc">Annuleren</button></div>';
+  }else h+='<button class="lnk" data-rx="'+g.id+'">💬 Reageer</button>';
+  return h+'</div>';
+}
+function graphSvg(c,src){
+  var gs=src.games,pl=c.players,W=340,H=220,L=30,R=12,T=10,B=26,cum={},mx=1,ps={players:pl,pts:src.pts},n=gs.length;
+  pl.forEach(function(p){cum[p]=[0]});
+  gs.forEach(function(g){pl.forEach(function(p){var q=place(ps,g,p),a=cum[p];a.push(a[a.length-1]+(q?pts(ps,q):0))})});
+  pl.forEach(function(p){mx=Math.max(mx,cum[p][cum[p].length-1])});
+  var step=mx<=10?2:mx<=25?5:mx<=60?10:20,ym=Math.ceil(mx/step)*step;
+  var X=function(i){return L+(n?i*(W-L-R)/n:0)},Y=function(v){return T+(H-T-B)*(1-v/ym)},v,i;
+  var o='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" role="img" aria-label="Puntenstand per potje">';
+  for(v=0;v<=ym;v+=step)o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(L-5)+'" y="'+(Y(v)+3)+'" text-anchor="end" font-size="10" style="fill:var(--mute)">'+v+'</text>';
+  var every=n>14?2:1;
+  for(i=1;i<=n;i++)if(i%every===0||i===n)o+='<text x="'+X(i)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" style="fill:var(--mute)">'+i+'</text>';
+  pl.forEach(function(p){
+    var col=c.colors&&c.colors[p]?'var(--c-'+c.colors[p]+')':'var(--ink)',pts_=cum[p].map(function(y,j){return X(j).toFixed(1)+','+Y(y).toFixed(1)}).join(' ');
+    o+='<polyline points="'+pts_+'" fill="none" stroke="rgba(59,42,26,.6)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+pts_+'" fill="none" style="stroke:'+col+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+    cum[p].forEach(function(y,j){o+='<circle cx="'+X(j).toFixed(1)+'" cy="'+Y(y).toFixed(1)+'" r="3" style="fill:'+col+'" stroke="rgba(59,42,26,.6)" stroke-width="1"/>'});
+  });
+  o+='</svg><div class="leg" style="justify-content:center">'+pl.slice().sort(function(a,b){return cum[b][n]-cum[a][n]}).map(function(p){return '<span>'+cn(c,p)+' '+cum[p][n]+'</span>'}).join('')+'</div>';
+  return o;
+}
+function grafView(c){
+  var h='<div class="card"><h2>📈 Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · puntenstand per potje</h2>';
+  h+=c.games.length?graphSvg(c,{games:c.games,pts:c.pts}):'<small>Nog geen potjes gespeeld dit seizoen.</small>';
+  return h+'<p style="text-align:center"><button class="lnk" id="kgt">Terug naar de stand</button></p></div>';
+}
+function runs(a){var bw=0,bl=0,cw=0,cl=0;a.forEach(function(r){if(r==='W'){cw++;cl=0}else if(r==='L'){cl++;cw=0}else{cw=0;cl=0}bw=Math.max(bw,cw);bl=Math.max(bl,cl)});return {bw:bw,bl:bl,cw:cw,cl:cl}}
+function streakBox(c){
+  var seq={},any=false,parts=[];
+  c.players.forEach(function(p){seq[p]=[]});
+  (c.seasons||[]).filter(function(x){return x.nr>(c.cupHide||0)}).sort(function(a,b){return a.nr-b.nr}).forEach(function(x){parts.push(x.games&&x.games.length?{games:x.games,pts:x.pts}:null)});
+  parts.push({games:c.games,pts:c.pts});
+  parts.forEach(function(sp){
+    if(!sp){c.players.forEach(function(p){seq[p].push('X')});return}
+    var ps={players:c.players,pts:sp.pts},lo=pts(ps,c.players.length);
+    sp.games.forEach(function(g){c.players.forEach(function(p){var q=place(ps,g,p);if(!q)return;any=true;seq[p].push(q===1?'W':pts(ps,q)===lo?'L':'G')})});
+  });
+  if(!any)return '';
+  var r={};c.players.forEach(function(p){r[p]=runs(seq[p])});
+  function line(lab,key,unit){
+    var mx=0,nm=[];c.players.forEach(function(p){var v=r[p][key];if(v>mx){mx=v;nm=[p]}else if(v===mx&&v>0)nm.push(p)});
+    return '<div class="g"><span>'+lab+'</span><span>'+(mx?cnl(c,nm,", ")+' ('+mx+')':'—')+'</span></div>';
+  }
+  return '<div class="card"><h2>Reeksen</h2>'+line('Langste zegereeks','bw')+line('Langste verliesreeks','bl')+line('Huidige winstreeks','cw')+line('Huidige verliesreeks','cl')+'</div>';
+}
+function archiefBox(c){
+  var ar=(c.seasons||[]).filter(function(x){return x.nr>(c.cupHide||0)}).slice().reverse(),off=baseSum(c),h='<div class="card"><h2>📚 Seizoensarchief</h2>';
+  if(!ar.length)return h+'<small>Nog geen afgesloten seizoenen.</small></div>';
+  ar.forEach(function(x){
+    var t='Seizoen '+(x.nr+off)+' · 🏆 '+cn(c,x.champ);
+    if(!x.stand){h+='<div class="g"><span>'+t+'</span></div>';return}
+    h+='<details style="border-bottom:1px solid var(--line);padding:7px 0"><summary style="cursor:pointer">'+t+'</summary><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th></tr>';
+    x.stand.forEach(function(r,i){h+='<tr class="'+pc(c,r.n).trim()+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(r.n)+'</td><td class="p">'+r.pt+'</td><td>'+r.g+'</td><td>'+r.w+'</td></tr>'});
+    h+='</table></div>'+(x.games&&x.games.length?graphSvg(c,{games:x.games,pts:x.pts}):'')+'</details>';
+  });
+  return h+'</div>';
+}
+function cupBox(c,s){
+  var cu=cupCounts(c,s),m=cu.m,ss=cu.ss.filter(function(x){return x.nr>(c.cupHide||0)});
   var rows=Object.keys(m).sort(function(a,b){return m[b]-m[a]||a.localeCompare(b)});
   var h='<div class="card"><h2>🏆 Beker van '+esc(c.name)+'</h2><div class="scroll"><table><tr><th class="n">Speler</th><th>Bekers</th></tr>';
   rows.forEach(function(p){h+='<tr class="'+pc(c,p).trim()+'"><td class="n">'+esc(p)+'</td><td class="p">'+m[p]+'</td></tr>'});
   h+='</table></div>';
-  if(ss.length)h+='<p><small>'+ss.map(function(x){return 'Seizoen '+x.nr+': '+cn(c,x.champ)}).join(' · ')+'</small></p>';
   return h+'</div>';
 }
 function cc(){return S.comps.filter(function(x){return x.id===cur})[0]}
 document.addEventListener("click",function(e){
   var el=e.target.closest("button");if(!el)return;
+  if(el.id==="vc"){
+    var cd=normCode($("vcode").value);
+    if(cd.length<8){$("vce").textContent="Vul de volledige toegangscode in.";return}
+    try{localStorage.setItem("catan_code",cd)}catch(e){}
+    startViewer(cd);return}
   if(el.id==="li"||el.id==="su"){
     var em=$("em").value.trim(),pw=$("pw").value,AE=$("ae");
     if(!em||!pw){AE.textContent="Vul je e-mailadres en wachtwoord in.";return}
@@ -270,11 +432,36 @@ document.addEventListener("click",function(e){
       if(el.id==="su"&&!r.data.session)AE.textContent="Account gemaakt. Open de bevestigingsmail en log daarna in."
     });
     return}
-  if(el.id==="lo"){sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;beker=t==="B";addOpen=t==="+";if(!beker&&!addOpen)cur=t;render();return}
+  if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;reactOpen='';delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
   if(!edit)return;
-  if(el.dataset.set){setOpen=true;render();return}
-  if(el.id==="sb"){setOpen=false;delAsk=false;render();return}
+  if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
+  if(el.id==="cr"){codeAsk=true;render();return}
+  if(el.id==="cn"){codeAsk=false;render();return}
+  if(el.id==="cc"){
+    var l=$("cl").value,CE=$("ce");
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(l).then(function(){CE.textContent="Link gekopieerd."},function(){$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."})}
+    else{$("cl").select();CE.textContent="Selecteer de link en kopieer hem zelf."}
+    return}
+  if(el.dataset.rx){reactOpen=el.dataset.rx;render();return}
+  if(el.dataset.em){rxEmoji=rxEmoji===el.dataset.em?'':el.dataset.em;document.querySelectorAll("[data-em]").forEach(function(b){b.classList.toggle("on",b.dataset.em===rxEmoji)});return}
+  if(el.id==="rxc"){reactOpen='';render();return}
+  if(el.dataset.rxdel){sb.from("reactions").delete().eq("id",+el.dataset.rxdel).then(function(){loadReacts()});return}
+  if(el.id==="rxs"){
+    var n7=$("rxn").value.trim(),E7=$("rxe");
+    if(!n7){E7.textContent="Vul je naam in.";return}
+    if(!rxEmoji){E7.textContent="Kies een emoji.";return}
+    el.disabled=true;
+    sb.rpc("add_reaction",{p_code:viewer?vcode:null,p_comp:cur,p_game:reactOpen,p_name:n7,p_emoji:rxEmoji,p_body:''}).then(function(r){
+      el.disabled=false;
+      if(r.error){E7.textContent="Plaatsen mislukt: "+r.error.message;return}
+      try{localStorage.setItem("catan_name",n7)}catch(e){}
+      rxName=n7;rxEmoji="";reactOpen="";loadReacts();render()});
+    return}
+  if(el.dataset.gr){grafOpen=true;render();window.scrollTo(0,0);return}
+  if(el.id==="kgt"){grafOpen=false;render();return}
+  if(el.dataset.set){setOpen=true;cupScr=false;cupAsk='';render();return}
+  if(el.id==="sb"){setOpen=false;cupScr=false;delAsk=false;render();return}
   if(el.id==="ss"){
     var c4=cc(),E4=$("se"),nm=[],col={},i4,nn=$("sn").value.trim();
     if(!nn){E4.textContent="Geef de competitie een naam.";return}
@@ -285,9 +472,10 @@ document.addEventListener("click",function(e){
     var pa=[];for(i4=0;i4<c4.players.length;i4++){var pv=parseInt($("pt"+i4).value,10);if(isNaN(pv)||pv<0||pv>99){E4.textContent="Geef bij elke plek een aantal punten van 0 tot 99.";return}pa.push(pv)}
     var map={};c4.players.forEach(function(p,i){map[p]=nm[i]});
     c4.games.forEach(function(g){var r={};Object.keys(g.res).forEach(function(k){r[map[k]||k]=g.res[k]});g.res=r;if(g.dice)g.dice=map[g.dice]||g.dice});
-    (c4.seasons||[]).forEach(function(x){x.champ=map[x.champ]||x.champ});
+    (c4.seasons||[]).forEach(function(x){x.champ=map[x.champ]||x.champ;if(x.stand)x.stand.forEach(function(r){r.n=map[r.n]||r.n});(x.games||[]).forEach(function(g){var r={};Object.keys(g.res).forEach(function(k){r[map[k]||k]=g.res[k]});g.res=r;if(g.dice)g.dice=map[g.dice]||g.dice})});
+    if(c4.cupBase){var nb={};Object.keys(c4.cupBase).forEach(function(k){nb[map[k]||k]=c4.cupBase[k]});c4.cupBase=nb}
     c4.players=nm;c4.colors=col;c4.name=nn;c4.pts=pa;setOpen=false;persist();render();return}
-  if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){cn.seasons=cn.seasons||[];cn.seasons.push({nr:cn.seasons.length+1,champ:sn.w,date:new Date().toLocaleDateString("nl-NL")});cn.games=[];persist();render()}return}
+  if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){cn.seasons=cn.seasons||[];cn.seasons.push({nr:cn.seasons.length+1,champ:sn.w,date:new Date().toLocaleDateString("nl-NL"),stand:stand(cn).map(function(r){return {n:r.n,pt:r.pt,g:r.g,w:r.w}}),games:cn.games,pts:cn.players.map(function(_,q){return pts(cn,q+1)})});cn.games=[];persist();render()}return}
   if(el.dataset.dice){var c0=cc(),g0=c0.games[c0.games.length-1],p0=pool(c0,g0);g0.dice=p0[Math.floor(Math.random()*p0.length)];persist();render();return}
   if(el.id==="mk"){
     var n=$("nn").value.trim(),p=[],col={},E=$("ne"),i;
@@ -300,12 +488,24 @@ document.addEventListener("click",function(e){
     var c1=cc(),n1=c1.players.length,res={},vals=[],ok=true,E=$("ge");
     document.querySelectorAll("select[data-p]").forEach(function(x){if(!x.value)ok=false;else vals.push(+x.value);res[c1.players[+x.dataset.p]]=x.value});
     if(!ok){E.textContent="Kies voor elke speler een plek.";return}
-    vals.sort(function(a,b){return a-b});
-    var bad=vals[0]!==1||vals[1]===1;
-    for(var j=1;j<vals.length;j++)if(!(vals[j]===vals[j-1]||vals[j]===j+1||vals[j]===n1))bad=true;
-    if(bad){E.textContent="Controleer de plaatsen: er is één winnaar en wie gelijk eindigt, kiest dezelfde plek (bijv. 1, 2, 2).";return}
-    c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
+    var wn=vals.filter(function(x){return x===1}).length;
+    if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
+        c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
+  if(el.id==="kgr"){cupAsk='g';render();return}
+  if(el.id==="kgy"){var c8=cc();c8.games=[];cupAsk='';persist();render();return}
+  if(el.id==="kbm"){cupScr=true;cupAsk='';cupPend=null;render();return}
+  if(el.id==="kbt"){cupScr=false;cupAsk='';cupPend=null;render();return}
+  if(el.id==="kbr"){cupAsk='r';render();return}
+  if(el.id==="kbn"){cupAsk='';cupPend=null;render();return}
+  if(el.id==="kba"){
+    var c6=cc(),pend={},E6=$("ce");
+    for(var j6=0;j6<c6.players.length;j6++){var v6=parseInt($("cu"+j6).value,10);if(isNaN(v6)||v6<0||v6>999){E6.textContent="Geef bij elke speler een aantal bekers van 0 tot 999.";return}pend[c6.players[j6]]=v6}
+    cupPend=pend;cupAsk='a';render();return}
+  if(el.id==="kby"||el.id==="kbj"){
+    var c5=cc(),s5=status(c5,stand(c5)),cu5=cupCounts(c5,s5),nb5={};
+    c5.players.forEach(function(p5){nb5[p5]=(el.id==="kbj"?cupPend[p5]:0)-cu5.raw[p5]});
+    c5.cupBase=nb5;c5.cupHide=(c5.seasons||[]).length+(s5.d?1:0);cupAsk='';cupPend=null;persist();render();return}
   if(el.id==="dc"){delAsk=true;render();return}
   if(el.id==="dn"){delAsk=false;render();return}
   if(el.id==="dy"){var c3=cc();S.comps=S.comps.filter(function(x){return x.id!==c3.id});cur=null;setOpen=false;delAsk=false;persist();render();return}
@@ -318,29 +518,32 @@ document.addEventListener("change",function(e){
   if(k)c.colors[p]=k;else delete c.colors[p];persist();render()});
 render();
 var SB_URL="https://jofjhzqijapwvmettuog.supabase.co",SB_KEY="sb_publishable_e_u9tqW0MHfePFmIln09ug_F-EOasIo";
-document.addEventListener("keydown",function(e){if(e.key==="Enter"&&(e.target.id==="pw"||e.target.id==="em")){var b=$("li");if(b)b.click()}});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"){var id=e.target.id,b=id==="vcode"?$("vc"):(id==="pw"||id==="em")?$("li"):null;if(b)b.click()}});
 function start(session){
-  sess=session;
-  if(!session){edit=false;S={comps:[]};if(chan){sb.removeChannel(chan);chan=null}render();return}
+  sess=session;viewer=false;clearInterval(pollT);
+  if(!session){edit=false;access=false;accOpen=false;vcodeAdmin="";S={comps:[]};if(chan){sb.removeChannel(chan);chan=null}render();return}
   $("who").innerHTML='<button class="lnk" id="lo">Uitloggen ('+esc(session.user.email||"")+')</button>';
   sb.from("admins").select("user_id").eq("user_id",session.user.id).maybeSingle().then(function(a){
-    edit=!!(a&&a.data);
-    return sb.from("league").select("data").eq("id",1).maybeSingle();
-  }).then(function(r){
-    if(r.error){sync("Laden mislukt: "+r.error.message)}
-    else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync(edit?"Je beheert deze stand. Vrienden zien wijzigingen direct.":"Alleen kijken: de stand wordt live bijgewerkt.")}
-    loaded=true;render();
-    if(!chan){chan=sb.channel("league").on("postgres_changes",{event:"*",schema:"public",table:"league"},function(p){
-      if(edit||!p.new||!p.new.data)return;
-      S=p.new.data.comps?p.new.data:{comps:[]};
-      var ae=document.activeElement;if(ae&&(ae.tagName==="SELECT"||ae.tagName==="INPUT"))return;
-      render()}).subscribe()}
+    edit=!!(a&&a.data);access=edit;
+    if(!access){loaded=true;render();return}
+    return sb.from("league").select("data").eq("id",1).maybeSingle().then(function(r){
+      if(r.error){sync("Laden mislukt: "+r.error.message)}
+      else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync("Je beheert deze stand.")}
+      loaded=true;render();loadReacts();clearInterval(pollT);pollT=setInterval(loadReacts,30000);
+    });
   });
 }
 if(!window.supabase){$("view").innerHTML='<div class="card">De verbinding met de database kon niet worden geladen. Controleer je internetverbinding en ververs de pagina.</div>'}
 else{
   sb=window.supabase.createClient(SB_URL,SB_KEY);
-  sb.auth.getSession().then(function(r){start(r.data.session)});
+  var up=new URLSearchParams(location.search).get("code");
+  if(up){try{localStorage.setItem("catan_code",normCode(up))}catch(e){}try{history.replaceState(null,"",location.pathname)}catch(e){}}
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&viewer)loadViewer()});
+  sb.auth.getSession().then(function(r){
+    if(r.data.session){start(r.data.session);return}
+    var sc=null;try{sc=localStorage.getItem("catan_code")}catch(e){}
+    if(sc)startViewer(sc);else render();
+  });
   sb.auth.onAuthStateChange(function(ev,session){
     if(ev!=="SIGNED_IN"&&ev!=="SIGNED_OUT")return;
     if(ev==="SIGNED_IN"&&sess&&session&&sess.user.id===session.user.id)return;
@@ -348,5 +551,6 @@ else{
 }
 })();
 </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js")})</script>
 </body>
 </html>
