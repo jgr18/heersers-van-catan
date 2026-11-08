@@ -276,6 +276,7 @@ function compView(c){
   var top=st[0].pt;
   st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td></tr>'});
   h+='</table></div></div>';
+  if(!s.d)h+=dealerBox(c);
   h+=formBox(c,st);
   if(s.d&&edit)h+='<div class="card"><button class="pri" id="ns">Start nieuw seizoen</button></div>';
   if(!s.d&&edit){
@@ -284,7 +285,6 @@ function compView(c){
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><select data-p="'+i+'"><option value="">Kies...</option>'+o.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select></div>'});
     h+='<div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
   }
-  if(!s.d)h+=dealerBox(c);
   h+='<div class="card"><h2>Gespeelde potjes</h2>';
   if(!c.games.length)h+='<small>Nog geen potjes.</small>';
   c.games.slice().reverse().forEach(function(g,i){
