@@ -395,7 +395,7 @@ function streakBox(c){
     var mx=0,nm=[];c.players.forEach(function(p){var v=r[p][key];if(v>mx){mx=v;nm=[p]}else if(v===mx&&v>0)nm.push(p)});
     return '<div class="g"><span>'+lab+'</span><span>'+(mx?cnl(c,nm,", ")+' ('+mx+')':'—')+'</span></div>';
   }
-  return '<div class="card"><h2>Reeksen</h2>'+line('Langste zegereeks','bw')+line('Langste verliesreeks','bl')+line('Huidige winstreeks','cw')+line('Huidige verliesreeks','cl')+'</div>';
+  return '<div class="card"><h2>Reeksen</h2>'+line('Langste zegereeks','bw')+line('Langste verliesreeks','bl')+line('Huidige zegereeks','cw')+line('Huidige verliesreeks','cl')+'</div>';
 }
 function archiefBox(c){
   var ar=(c.seasons||[]).filter(function(x){return x.nr>(c.cupHide||0)}).slice().reverse(),off=baseSum(c),h='<div class="card"><h2>📚 Seizoensarchief</h2>';

@@ -21,7 +21,7 @@ Eerste volledige versie.
 - Stand met punten, gespeeld, W, G en V.
 - Wie deelt: de laatste deelt het volgende potje, bij gelijk wordt gedobbeld.
 - Vorm: de laatste 5 potjes als gekleurde rondjes.
-- Reeksen: langste zegereeks, langste verliesreeks, huidige winstreeks en huidige verliesreeks.
+- Reeksen: langste zegereeks, langste verliesreeks, huidige zegereeks en huidige verliesreeks.
 - Lijst met gespeelde potjes. Het laatste potje kan worden verwijderd.
 - Volgend duel: datum, locatie en tijd noteren (optioneel).
 
