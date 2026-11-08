@@ -107,7 +107,7 @@ main{position:relative;z-index:1}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,cupAsk=false,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -167,8 +167,8 @@ function defPts(n){return n===3?[3,1,0]:[3,2,1].concat(Array(n-3).fill(0))}
 function pts(c,pl){var t=c.pts&&c.pts.length===c.players.length?c.pts:defPts(c.players.length);return +t[pl-1]||0}
 function place(c,g,p){var r=g.res[p];if(r==null||r==="")return 0;if(/^\d+$/.test(r))return +r;var n=c.players.length;return r==="w"?1:r==="s"?2:r==="t"?3:n}
 function stand(c){
-  var m={};c.players.forEach(function(p){m[p]={n:p,pt:0,w:0,g:0}});
-  c.games.forEach(function(g){c.players.forEach(function(p){var pl=place(c,g,p);if(!pl)return;var x=m[p];x.g++;x.pt+=pts(c,pl);if(pl===1)x.w++})});
+  var m={},lo=pts(c,c.players.length);c.players.forEach(function(p){m[p]={n:p,pt:0,w:0,d:0,v:0,g:0}});
+  c.games.forEach(function(g){c.players.forEach(function(p){var pl=place(c,g,p);if(!pl)return;var x=m[p];x.g++;x.pt+=pts(c,pl);if(pl===1)x.w++;else if(pts(c,pl)===lo)x.v++;else x.d++})});
   return Object.keys(m).map(function(k){return m[k]}).sort(function(a,b){return b.pt-a.pt||b.w-a.w||a.n.localeCompare(b.n)});
 }
 function status(c,st){
@@ -214,6 +214,7 @@ function settingsView(c){
   c.players.forEach(function(p,i){h+='<div class="row"><input id="sp'+i+'" value="'+attr(p)+'"><select id="sk'+i+'">'+opt(c.colors&&c.colors[p])+'</select></div>'});
   h+='<p><small>Punten per plek</small></p>';
   for(var q=1;q<=c.players.length;q++)h+='<div class="row"><label>'+(q===1?'Winnaar':q+'e plaats')+'</label><input type="number" min="0" max="99" step="1" inputmode="numeric" id="pt'+(q-1)+'" value="'+pts(c,q)+'" style="max-width:100px"></div>';
+  h+='<p><small>Beker</small></p>'+(cupAsk?'<p><b>Alle bekers op 0 zetten? De telling begint daarna opnieuw.</b></p><button class="pri" id="cry">Ja, op 0 zetten</button> <button class="lnk" id="crn">Annuleren</button><div class="err" id="ce"></div>':'<p><button class="lnk" id="cr">Beker op 0 zetten</button></p>');
   return h+'<div class="err" id="se"></div><button class="pri" id="ss">Opslaan</button><p style="text-align:center"><button class="lnk" id="sb">Terug zonder opslaan</button></p></div>'+(delAsk?'<div class="card" style="text-align:center"><p><b>Weet je zeker dat je deze competitie met alle uitslagen en bekers wilt verwijderen? Dit kan niet ongedaan worden gemaakt.</b></p><button class="pri" id="dy">Ja, verwijderen</button><p><button class="lnk" id="dn">Annuleren</button></p></div>':'<div style="text-align:center"><button class="lnk" id="dc">Competitie verwijderen</button></div>');
 }
 function colorsCard(c){
@@ -272,9 +273,9 @@ function newForm(){
 function compView(c){
   if(setOpen&&edit)return settingsView(c);
   var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1)+' · '+esc(s.t)+'</div>';
-  h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>Winst</th></tr>';
+  h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
-  st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td></tr>'});
+  st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td><td>'+x.d+'</td><td>'+x.v+'</td></tr>'});
   h+='</table></div></div>';
   if(!s.d)h+=dealerBox(c);
   h+=formBox(c,st);
@@ -295,11 +296,16 @@ function compView(c){
   h+=cupBox(c,s);
   return h;
 }
-function cupBox(c,s){
-  var ss=(c.seasons||[]).slice(),m={};
+function cupCounts(c,s){
+  var ss=(c.seasons||[]).slice(),m={},raw={},b=c.cupBase||{};
   if(s.d)ss.push({nr:ss.length+1,champ:s.w});
-  c.players.forEach(function(p){m[p]=0});
-  ss.forEach(function(x){m[x.champ]=(m[x.champ]||0)+1});
+  c.players.forEach(function(p){raw[p]=0});
+  ss.forEach(function(x){raw[x.champ]=(raw[x.champ]||0)+1});
+  Object.keys(raw).forEach(function(p){m[p]=raw[p]+(b[p]||0)});
+  return {m:m,raw:raw,ss:ss};
+}
+function cupBox(c,s){
+  var cu=cupCounts(c,s),m=cu.m,ss=cu.ss.filter(function(x){return x.nr>(c.cupHide||0)});
   var rows=Object.keys(m).sort(function(a,b){return m[b]-m[a]||a.localeCompare(b)});
   var h='<div class="card"><h2>🏆 Beker van '+esc(c.name)+'</h2><div class="scroll"><table><tr><th class="n">Speler</th><th>Bekers</th></tr>';
   rows.forEach(function(p){h+='<tr class="'+pc(c,p).trim()+'"><td class="n">'+esc(p)+'</td><td class="p">'+m[p]+'</td></tr>'});
@@ -326,7 +332,7 @@ document.addEventListener("click",function(e){
     });
     return}
   if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
-  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
+  if(el.dataset.t){var t=el.dataset.t;setOpen=false;delAsk=false;cupAsk=false;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
   if(!edit)return;
   if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
   if(el.id==="cr"){codeAsk=true;render();return}
@@ -349,6 +355,7 @@ document.addEventListener("click",function(e){
     var map={};c4.players.forEach(function(p,i){map[p]=nm[i]});
     c4.games.forEach(function(g){var r={};Object.keys(g.res).forEach(function(k){r[map[k]||k]=g.res[k]});g.res=r;if(g.dice)g.dice=map[g.dice]||g.dice});
     (c4.seasons||[]).forEach(function(x){x.champ=map[x.champ]||x.champ});
+    if(c4.cupBase){var nb={};Object.keys(c4.cupBase).forEach(function(k){nb[map[k]||k]=c4.cupBase[k]});c4.cupBase=nb}
     c4.players=nm;c4.colors=col;c4.name=nn;c4.pts=pa;setOpen=false;persist();render();return}
   if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){cn.seasons=cn.seasons||[];cn.seasons.push({nr:cn.seasons.length+1,champ:sn.w,date:new Date().toLocaleDateString("nl-NL")});cn.games=[];persist();render()}return}
   if(el.dataset.dice){var c0=cc(),g0=c0.games[c0.games.length-1],p0=pool(c0,g0);g0.dice=p0[Math.floor(Math.random()*p0.length)];persist();render();return}
@@ -367,6 +374,15 @@ document.addEventListener("click",function(e){
     if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
         c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
+  if(el.id==="cr"){cupAsk=true;render();return}
+  if(el.id==="crn"){cupAsk=false;render();return}
+  if(el.id==="cry"){
+    var c5=cc(),s5=status(c5,stand(c5)),cu5=cupCounts(c5,s5),nb5={},E5=$("ce");
+    for(var j=0;j<c5.players.length;j++){
+      var p5=c5.players[j],v5=0;
+      nb5[p5]=v5-cu5.raw[p5];
+    }
+    c5.cupBase=nb5;c5.cupHide=(c5.seasons||[]).length+(s5.d?1:0);cupAsk=false;persist();render();return}
   if(el.id==="dc"){delAsk=true;render();return}
   if(el.id==="dn"){delAsk=false;render();return}
   if(el.id==="dy"){var c3=cc();S.comps=S.comps.filter(function(x){return x.id!==c3.id});cur=null;setOpen=false;delAsk=false;persist();render();return}
