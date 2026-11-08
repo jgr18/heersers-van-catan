@@ -179,8 +179,17 @@ function status(c,st){
   return {t:"🏆 Kampioen: "+lead[0].n+" met "+top+" punten",d:true,w:lead[0].n};
 }
 function pool(c,g){
-  var mx=0;c.players.forEach(function(p){mx=Math.max(mx,place(c,g,p))});
-  return c.players.filter(function(p){return place(c,g,p)===mx});
+  var mn=1e9;c.players.forEach(function(p){var pl=place(c,g,p);if(pl)mn=Math.min(mn,pts(c,pl))});
+  return c.players.filter(function(p){var pl=place(c,g,p);return pl&&pts(c,pl)===mn});
+}
+function resultOptions(c){
+  var n=c.players.length,gs=[],q;
+  for(q=1;q<=n;q++){var v=pts(c,q),l=gs[gs.length-1];if(l&&l.v===v)l.end=q;else gs.push({v:v,start:q,end:q})}
+  return gs.map(function(g,i){
+    var last=i===gs.length-1,val=last?n:g.start;
+    var lab=g.start===1?'Winnaar':last?'Laatste':(g.end>g.start?g.start+'e/'+g.end+'e plaats':g.start+'e plaats');
+    return [String(val),lab+' ('+g.v+')'];
+  });
 }
 function formBox(c,st){
   var gs=c.games.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 potjes)</small></h2>';
@@ -270,7 +279,7 @@ function compView(c){
   h+=formBox(c,st);
   if(s.d&&edit)h+='<div class="card"><button class="pri" id="ns">Start nieuw seizoen</button></div>';
   if(!s.d&&edit){
-    var o=[];for(var q=1;q<=n;q++)o.push([String(q),(q===1?'Winnaar':q===n?'Laatste':q+'e plaats')+' ('+pts(c,q)+')']);
+    var o=resultOptions(c);
     h+='<div class="card"><h2>Uitslag potje '+(c.games.length+1)+'</h2>';
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><select data-p="'+i+'"><option value="">Kies...</option>'+o.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select></div>'});
     h+='<div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
@@ -354,11 +363,9 @@ document.addEventListener("click",function(e){
     var c1=cc(),n1=c1.players.length,res={},vals=[],ok=true,E=$("ge");
     document.querySelectorAll("select[data-p]").forEach(function(x){if(!x.value)ok=false;else vals.push(+x.value);res[c1.players[+x.dataset.p]]=x.value});
     if(!ok){E.textContent="Kies voor elke speler een plek.";return}
-    vals.sort(function(a,b){return a-b});
-    var bad=vals[0]!==1||vals[1]===1;
-    for(var j=1;j<vals.length;j++)if(!(vals[j]===vals[j-1]||vals[j]===j+1||vals[j]===n1))bad=true;
-    if(bad){E.textContent="Controleer de plaatsen: er is één winnaar en wie gelijk eindigt, kiest dezelfde plek (bijv. 1, 2, 2).";return}
-    c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
+    var wn=vals.filter(function(x){return x===1}).length;
+    if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
+        c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});persist();render();return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
   if(el.id==="dc"){delAsk=true;render();return}
   if(el.id==="dn"){delAsk=false;render();return}
