@@ -294,6 +294,19 @@ function bekerView(){
   if(!any)h+='<small>Nog geen competitie beslist.</small>';
   return h+'</div>';
 }
+function earlyWin(c,st,s){
+  var n=c.games.length,T=10;
+  if(s.d||n<1||n>=T||c.players.length<2)return null;
+  var r=T-n,sw=pts(c,1)-pts(c,c.players.length);
+  if(sw<=0||st[0].pt===st[1].pt)return null;
+  return st[0].pt-st[1].pt>r*sw?{w:st[0].n,r:r}:null;
+}
+function closeSeason(cn){
+  var st=stand(cn);
+  cn.seasons=cn.seasons||[];
+  cn.seasons.push({nr:cn.seasons.length+1,champ:st[0].n,date:new Date().toLocaleDateString("nl-NL"),stand:st.map(function(r){return {n:r.n,pt:r.pt,g:r.g,w:r.w}}),games:cn.games,pts:cn.players.map(function(_,q){return pts(cn,q+1)})});
+  cn.games=[];delete cn.earlyNo;
+}
 function newForm(){
   var opt='<option value="">Kleur...</option>'+Object.keys(KL).map(function(k){return '<option value="'+k+'">'+KL[k]+'</option>'}).join('');
   var h='<div class="card"><h2>Nieuwe competitie</h2><p><input id="nn" placeholder="Naam, bijv. Vrijdagavond"></p>';
@@ -304,6 +317,8 @@ function compView(c){
   if(grafOpen)return grafView(c);
   if(setOpen&&edit)return cupScr?cupAdminView(c):settingsView(c);
   var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
+  var ew=edit&&!c.earlyNo?earlyWin(c,st,s):null;
+  if(ew)h+='<div class="card" style="border:2px solid var(--acc)"><h2>🏆 Seizoen beslist</h2><p><b>'+cn(c,ew.w)+'</b> kan niet meer worden ingehaald. Er '+(ew.r===1?'is nog 1 potje':'zijn nog '+ew.r+' potjes')+' te spelen. '+cn(c,ew.w)+' krijgt de beker.</p><button class="pri" id="ey">Seizoen opslaan en nieuw seizoen starten</button><p style="text-align:center;margin:8px 0 0"><button class="lnk" id="en">Nog doorspelen</button></p></div>';
   h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
   st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td><td>'+x.d+'</td><td>'+x.v+'</td></tr>'});
@@ -447,7 +462,9 @@ document.addEventListener("click",function(e){
     (c4.seasons||[]).forEach(function(x){x.champ=map[x.champ]||x.champ;if(x.stand)x.stand.forEach(function(r){r.n=map[r.n]||r.n});(x.games||[]).forEach(function(g){var r={};Object.keys(g.res).forEach(function(k){r[map[k]||k]=g.res[k]});g.res=r;if(g.dice)g.dice=map[g.dice]||g.dice})});
     if(c4.cupBase){var nb={};Object.keys(c4.cupBase).forEach(function(k){nb[map[k]||k]=c4.cupBase[k]});c4.cupBase=nb}
     c4.players=nm;c4.colors=col;c4.name=nn;c4.pts=pa;setOpen=false;persist();render();return}
-  if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){cn.seasons=cn.seasons||[];cn.seasons.push({nr:cn.seasons.length+1,champ:sn.w,date:new Date().toLocaleDateString("nl-NL"),stand:stand(cn).map(function(r){return {n:r.n,pt:r.pt,g:r.g,w:r.w}}),games:cn.games,pts:cn.players.map(function(_,q){return pts(cn,q+1)})});cn.games=[];persist();render()}return}
+  if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){closeSeason(cn);persist();render()}return}
+  if(el.id==="ey"){var ce=cc();if(earlyWin(ce,stand(ce),status(ce,stand(ce)))){closeSeason(ce);planOpen=false;persist();render()}return}
+  if(el.id==="en"){cc().earlyNo=true;persist();render();return}
   if(el.dataset.dice){var c0=cc(),g0=c0.games[c0.games.length-1],p0=pool(c0,g0);g0.dice=p0[Math.floor(Math.random()*p0.length)];persist();render();return}
   if(el.id==="mk"){
     var n=$("nn").value.trim(),p=[],col={},E=$("ne"),i;
