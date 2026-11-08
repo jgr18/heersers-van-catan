@@ -247,10 +247,10 @@ function planDate(d){
 function planHtml(c){
   var p=c.plan||{},has=p.date||p.time||p.where;
   if(planOpen&&edit)return '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div class="row"><label style="flex:none;width:70px">📅 Datum</label><input type="date" id="pld" value="'+attr(p.date||"")+'"></div><div class="row"><label style="flex:none;width:70px">🕗 Tijd</label><input type="time" id="plt" value="'+attr(p.time||"")+'"></div><div class="row"><label style="flex:none;width:70px">📍 Waar</label><input id="plw" maxlength="40" placeholder="Bijv. bij Piet" value="'+attr(p.where||"")+'"></div><button class="pri" id="plsv">Opslaan</button><p style="text-align:center;margin:6px 0 0"><button class="lnk" id="plcn">Annuleren</button>'+(has?' <button class="lnk" id="plcl">Wissen</button>':'')+'</p></div>';
-  var h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;font-family:system-ui,sans-serif;font-size:.92rem;overflow-wrap:anywhere">',e='<span style="color:var(--mute)">—</span>';
+  var h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div style="font-weight:600;font-size:.85rem;color:var(--mute);margin-bottom:6px">Volgend duel:</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;font-family:system-ui,sans-serif;font-size:.92rem;overflow-wrap:anywhere">',e='<span style="color:var(--mute)">—</span>';
   h+='<span>📅 '+(p.date?'<b>'+esc(planDate(p.date))+'</b>':e)+'</span>';
   h+='<span>📍 '+(p.where?'<b>'+esc(p.where)+'</b>':e)+'</span>';
-  h+='<span>🕗 '+(p.time?'<b>'+esc(p.time)+'</b>':e)+'</span></div>';
+  h+='<span>🕗 '+(p.time?'<b>'+esc(p.time)+'</b>':e)+'</span></div></div>';
   if(edit)h+='<p style="margin:8px 0 0"><button class="lnk" data-pl="1">✏️ '+(has?'Afspraak wijzigen':'Afspraak invullen')+'</button></p>';
   return h;
 }
