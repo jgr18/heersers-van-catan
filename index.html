@@ -93,6 +93,7 @@ main{position:relative;z-index:1}
 .d.w{background:#2e9d4f}.d.s{background:#f2b705}.d.t{background:#d32f2f}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:10px}
 .leg .d{width:12px;height:12px;border-width:1px;margin-right:5px;vertical-align:middle}
+.bell{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;min-height:40px;border:1px solid var(--line);border-radius:20px;background:var(--field);color:var(--ink);font:inherit;cursor:pointer}.bell.on{border-color:var(--acc);font-weight:600}.bell:disabled{opacity:.6}
 .chk{display:flex;gap:8px;align-items:center;margin:8px 0;font-size:.9rem}.chk input{width:auto}
 </style>
 </head>
@@ -104,12 +105,12 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.3</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.4</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,pushComps=[],pushMsg='',pushDone=false,planOpen=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,pushComps=[],pushMsg='',pushBusy=false,pushDone=false,planOpen=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -119,7 +120,8 @@ function pushOk(){return "serviceWorker" in navigator&&"PushManager" in window&&
 function b64u(t){var b=(t+"=".repeat((4-t.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/"),r=atob(b),a=new Uint8Array(r.length),i;for(i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
 function bellBtn(c){
   if(!("serviceWorker" in navigator))return '<span></span>';
-  return '<button class="lnk" data-bell="1">'+(pushComps.indexOf(c.id)>=0?'🔔 Meldingen aan':'🔕 Meldingen uit')+'</button>';
+  var on=pushComps.indexOf(c.id)>=0;
+  return '<button class="bell'+(on?' on':'')+'" data-bell="1"'+(pushBusy?' disabled':'')+'><span>'+(on?'🔔':'🔕')+'</span><span>'+(pushBusy?'Bezig...':on?'Meldingen aan':'Meldingen uit')+'</span></button>';
 }
 function pushLoad(){
   if(pushDone||!pushOk()||!sb||!(viewer||edit))return;
@@ -129,18 +131,29 @@ function pushLoad(){
     return sb.rpc("push_get",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint}).then(function(r){pushComps=r&&Array.isArray(r.data)?r.data:[];render()});
   }).catch(function(){});
 }
+function swReady(){
+  return Promise.race([navigator.serviceWorker.ready,new Promise(function(_,rej){setTimeout(function(){rej(new Error("De app is nog niet klaar. Sluit de app, open hem opnieuw en probeer het nog eens."))},10000)})]).then(function(reg){return reg.update().catch(function(){}).then(function(){return reg})});
+}
+function pushErr(e){
+  var m=String((e&&e.message)||e);
+  if(/push service error/i.test(m))return "Je browser kan de meldingsdienst niet bereiken. In Brave: zet 'Google-services gebruiken voor pushberichten' aan in brave://settings/privacy en start Brave opnieuw.";
+  if(/Geen toegang/i.test(m))return "Je toegangscode is niet meer geldig. Open de link opnieuw of vul de nieuwe code in.";
+  return "Meldingen instellen mislukt: "+m;
+}
 function pushToggle(c){
+  if(pushBusy)return;
   pushMsg="";
   if(!pushOk()){pushMsg="Meldingen werken op een iPhone alleen als de app op je beginscherm staat: tik in Safari op het deelicoon en kies Zet op beginscherm. Open de app daarna vanaf je beginscherm.";render();return}
   if(Notification.permission==="denied"){pushMsg="Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je telefoon voor deze app.";render();return}
   var on=pushComps.indexOf(c.id)>=0,next=on?pushComps.filter(function(x){return x!==c.id}):pushComps.concat([c.id]);
   var p=on?Promise.resolve():Notification.requestPermission().then(function(r){if(r!=="granted")throw new Error("Je hebt geen toestemming gegeven.")});
-  p.then(function(){return navigator.serviceWorker.ready}).then(function(reg){
+  pushBusy=true;render();
+  p.then(swReady).then(function(reg){
     return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)})});
   }).then(function(sub){
     var j=sub.toJSON();
     return sb.rpc("push_subscribe",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_comps:next}).then(function(r){if(r.error)throw new Error(r.error.message);pushComps=next});
-  }).catch(function(e){pushMsg="Meldingen instellen mislukt: "+(e.message||e)}).then(function(){render()});
+  }).catch(function(e){pushMsg=pushErr(e)}).then(function(){pushBusy=false;render()});
 }
 function sendPush(c,body){
   if(!edit||!sb)return;
