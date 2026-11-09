@@ -93,6 +93,7 @@ main{position:relative;z-index:1}
 .d.w{background:#2e9d4f}.d.s{background:#f2b705}.d.t{background:#d32f2f}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:10px}
 .leg .d{width:12px;height:12px;border-width:1px;margin-right:5px;vertical-align:middle}
+.chk{display:flex;gap:8px;align-items:center;margin:8px 0;font-size:.9rem}.chk input{width:auto}
 </style>
 </head>
 <body>
@@ -103,16 +104,57 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.2</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.3</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-var delAsk=false,planOpen=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
+var delAsk=false,pushComps=[],pushMsg='',pushDone=false,planOpen=false,grafOpen=false,cupScr=false,cupAsk='',cupPend=null,setOpen=false,KL={rood:'Rood',blauw:'Blauw',wit:'Wit',groen:'Groen',geel:'Geel',bruin:'Bruin'},S={comps:[]},cur=null,addOpen=false,ref=null,access=false,accOpen=false,vcodeAdmin="",viewer=false,codeAsk=false,vcode=null,pollT=null,loginMsg="",sess=null,sb=null,chan=null,loaded=false,edit=false,beker=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return Math.random().toString(36).slice(2,9)}
 function sync(t){$("sync").textContent=t}
+var VAPID_PUB="BINc_BYt0PE_np_fWkeFejgGmEtGmg8ukcXXfFXM7FUbKKPbTQ28GgbDA7xyl5hzRv8vRuUXHqkW5C0Me-gNsns";
+function pushOk(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
+function b64u(t){var b=(t+"=".repeat((4-t.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/"),r=atob(b),a=new Uint8Array(r.length),i;for(i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
+function bellBtn(c){
+  if(!("serviceWorker" in navigator))return '<span></span>';
+  return '<button class="lnk" data-bell="1">'+(pushComps.indexOf(c.id)>=0?'🔔 Meldingen aan':'🔕 Meldingen uit')+'</button>';
+}
+function pushLoad(){
+  if(pushDone||!pushOk()||!sb||!(viewer||edit))return;
+  pushDone=true;
+  navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription()}).then(function(sub){
+    if(!sub)return;
+    return sb.rpc("push_get",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint}).then(function(r){pushComps=r&&Array.isArray(r.data)?r.data:[];render()});
+  }).catch(function(){});
+}
+function pushToggle(c){
+  pushMsg="";
+  if(!pushOk()){pushMsg="Meldingen werken op een iPhone alleen als de app op je beginscherm staat: tik in Safari op het deelicoon en kies Zet op beginscherm. Open de app daarna vanaf je beginscherm.";render();return}
+  if(Notification.permission==="denied"){pushMsg="Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je telefoon voor deze app.";render();return}
+  var on=pushComps.indexOf(c.id)>=0,next=on?pushComps.filter(function(x){return x!==c.id}):pushComps.concat([c.id]);
+  var p=on?Promise.resolve():Notification.requestPermission().then(function(r){if(r!=="granted")throw new Error("Je hebt geen toestemming gegeven.")});
+  p.then(function(){return navigator.serviceWorker.ready}).then(function(reg){
+    return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)})});
+  }).then(function(sub){
+    var j=sub.toJSON();
+    return sb.rpc("push_subscribe",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_comps:next}).then(function(r){if(r.error)throw new Error(r.error.message);pushComps=next});
+  }).catch(function(e){pushMsg="Meldingen instellen mislukt: "+(e.message||e)}).then(function(){render()});
+}
+function sendPush(c,body){
+  if(!edit||!sb)return;
+  sync("Melding versturen...");
+  sb.functions.invoke("send-push",{body:{comp_id:c.id,title:c.name,body:body}}).then(function(r){
+    if(r.error){sync("Melding versturen mislukt.");return}
+    var n=r.data&&r.data.sent;
+    sync(n?"Melding verstuurd naar "+n+(n===1?" telefoon.":" telefoons."):"Melding verstuurd, maar niemand heeft meldingen aan.");
+  }).catch(function(){sync("Melding versturen mislukt.")});
+}
+function resultMsg(c){
+  var st=stand(c),s=status(c,st),g=c.games[c.games.length-1],w=c.players.filter(function(p){return place(c,g,p)===1})[0];
+  return "Duel "+c.games.length+": "+w+" wint. Stand: "+st.map(function(x){return x.n+" "+x.pt}).join(" · ")+(s.d?". 🏆 "+s.w+" is kampioen!":"");
+}
 function authMsg(e){var m=(e.message||"").toLowerCase();
   if(m.indexOf("invalid login")>-1)return "E-mailadres of wachtwoord klopt niet.";
   if(m.indexOf("already registered")>-1)return "Dit e-mailadres heeft al een account. Log in.";
@@ -149,7 +191,7 @@ function loadViewer(){
     if(!viewer)return;
     if(r.error){sync("Laden mislukt: "+r.error.message);return}
     if(!r.data){stopViewer("Deze toegangscode klopt niet (meer).");return}
-    S=r.data.comps?r.data:{comps:[]};sync("Alleen kijken. De stand ververst elke halve minuut.");loaded=true;render()});
+    S=r.data.comps?r.data:{comps:[]};sync("Alleen kijken. De stand ververst elke halve minuut.");loaded=true;render();pushLoad()});
 }
 function startViewer(code){
   vcode=code;viewer=true;sess=null;access=true;edit=false;
@@ -247,7 +289,7 @@ function planDate(d){
 }
 function planHtml(c){
   var p=c.plan||{},has=p.date||p.time||p.where;
-  if(planOpen&&edit)return '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div class="row"><label style="flex:none;width:70px">📅 Datum</label><input type="date" id="pld" value="'+attr(p.date||"")+'"></div><div class="row"><label style="flex:none;width:70px">🕗 Tijd</label><input type="time" id="plt" value="'+attr(p.time||"")+'"></div><div class="row"><label style="flex:none;width:70px">📍 Waar</label><input id="plw" maxlength="40" placeholder="Bijv. bij Piet" value="'+attr(p.where||"")+'"></div><button class="pri" id="plsv">Opslaan</button><p style="text-align:center;margin:6px 0 0"><button class="lnk" id="plcn">Annuleren</button>'+(has?' <button class="lnk" id="plcl">Wissen</button>':'')+'</p></div>';
+  if(planOpen&&edit)return '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div class="row"><label style="flex:none;width:70px">📅 Datum</label><input type="date" id="pld" value="'+attr(p.date||"")+'"></div><div class="row"><label style="flex:none;width:70px">🕗 Tijd</label><input type="time" id="plt" value="'+attr(p.time||"")+'"></div><div class="row"><label style="flex:none;width:70px">📍 Waar</label><input id="plw" maxlength="40" placeholder="Bijv. bij Piet" value="'+attr(p.where||"")+'"></div><label class="chk"><input type="checkbox" id="pnp" checked> Stuur melding naar de deelnemers</label><button class="pri" id="plsv">Opslaan</button><p style="text-align:center;margin:6px 0 0"><button class="lnk" id="plcn">Annuleren</button>'+(has?' <button class="lnk" id="plcl">Wissen</button>':'')+'</p></div>';
   var h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:system-ui,sans-serif"><div style="font-weight:600;font-size:.85rem;color:var(--mute);margin-bottom:6px">Volgend duel:</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;font-family:system-ui,sans-serif;font-size:.92rem;overflow-wrap:anywhere">',e='<span style="color:var(--mute)">—</span>';
   h+='<span>📅 '+(p.date?'<b>'+esc(planDate(p.date))+'</b>':e)+'</span>';
   h+='<span>📍 '+(p.where?'<b>'+esc(p.where)+'</b>':e)+'</span>';
@@ -317,9 +359,9 @@ function newForm(){
 function compView(c){
   if(grafOpen)return grafView(c);
   if(setOpen&&edit)return cupScr?cupAdminView(c):settingsView(c);
-  var st=stand(c),s=status(c,st),n=c.players.length,h=(edit?'<div style="text-align:right"><button class="lnk" data-set="1">⚙️ Instellingen</button></div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
+  var st=stand(c),s=status(c,st),n=c.players.length,h='<div style="display:flex;justify-content:space-between;align-items:center">'+bellBtn(c)+(edit?'<button class="lnk" data-set="1">⚙️ Instellingen</button>':'')+'</div>'+(pushMsg?'<div class="err" style="margin:4px 0">'+esc(pushMsg)+'</div>':'')+'<div class="status'+(s.d?' done':'')+'">Seizoen '+((c.seasons||[]).length+1+baseSum(c))+' · '+esc(s.t)+'</div>';
   var ew=edit&&!c.earlyNo?earlyWin(c,st,s):null;
-  if(ew)h+='<div class="card" style="border:2px solid var(--acc)"><h2>🏆 Seizoen beslist</h2><p><b>'+cn(c,ew.w)+'</b> kan niet meer worden ingehaald. Er '+(ew.r===1?'is nog 1 duel':'zijn nog '+ew.r+' duels')+' te spelen. '+cn(c,ew.w)+' krijgt de beker.</p><button class="pri" id="ey">Seizoen opslaan en nieuw seizoen starten</button><p style="text-align:center;margin:8px 0 0"><button class="lnk" id="en">Nog doorspelen</button></p></div>';
+  if(ew)h+='<div class="card" style="border:2px solid var(--acc)"><h2>🏆 Seizoen beslist</h2><p><b>'+cn(c,ew.w)+'</b> kan niet meer worden ingehaald. Er '+(ew.r===1?'is nog 1 duel':'zijn nog '+ew.r+' duels')+' te spelen. '+cn(c,ew.w)+' krijgt de beker.</p><label class="chk"><input type="checkbox" id="pne" checked> Stuur melding naar de deelnemers</label><button class="pri" id="ey">Seizoen opslaan en nieuw seizoen starten</button><p style="text-align:center;margin:8px 0 0"><button class="lnk" id="en">Nog doorspelen</button></p></div>';
   h+='<div class="card"><h2>Stand</h2><div class="scroll"><table><tr><th class="n">#</th><th class="n">Speler</th><th>Pnt</th><th>Gesp</th><th>W</th><th>G</th><th>V</th></tr>';
   var top=st[0].pt;
   st.forEach(function(x,i){h+='<tr class="'+((x.pt===top&&c.games.length?'lead':'')+pc(c,x.n))+'"><td class="n">'+(i+1)+'</td><td class="n">'+esc(x.n)+'</td><td class="p">'+x.pt+'</td><td>'+x.g+'</td><td>'+x.w+'</td><td>'+x.d+'</td><td>'+x.v+'</td></tr>'});
@@ -332,7 +374,7 @@ function compView(c){
     var o=resultOptions(c);
     h+='<div class="card"><h2>Uitslag duel '+(c.games.length+1)+'</h2>';
     c.players.forEach(function(p,i){h+='<div class="row"><label class="'+pc(c,p).trim()+'">'+esc(p)+'</label><select data-p="'+i+'"><option value="">Kies...</option>'+o.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select></div>'});
-    h+='<div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
+    h+='<label class="chk"><input type="checkbox" id="pnx" checked> Stuur melding naar de deelnemers</label><div class="err" id="ge"></div><button class="pri" id="sv">Uitslag opslaan</button></div>';
   }
   h+='<div class="card"><h2>Gespeelde duels</h2>';
   if(!c.games.length)h+='<small>Nog geen duels.</small>';
@@ -467,7 +509,7 @@ document.addEventListener("click",function(e){
     if(c4.cupBase){var nb={};Object.keys(c4.cupBase).forEach(function(k){nb[map[k]||k]=c4.cupBase[k]});c4.cupBase=nb}
     c4.players=nm;c4.colors=col;c4.name=nn;c4.pts=pa;setOpen=false;persist();render();return}
   if(el.id==="ns"){var cn=cc(),sn=status(cn,stand(cn));if(sn.d){closeSeason(cn);persist();render()}return}
-  if(el.id==="ey"){var ce=cc();if(earlyWin(ce,stand(ce),status(ce,stand(ce)))){closeSeason(ce);planOpen=false;persist();render()}return}
+  if(el.id==="ey"){var ce=cc();if(earlyWin(ce,stand(ce),status(ce,stand(ce)))){var snd2=$("pne")&&$("pne").checked,st2=stand(ce)[0],msg2="🏆 Seizoen beslist: "+st2.n+" wint de beker met "+st2.pt+" punten.";closeSeason(ce);planOpen=false;persist();render();if(snd2)sendPush(ce,msg2)}return}
   if(el.id==="en"){cc().earlyNo=true;persist();render();return}
   if(el.dataset.dice){var c0=cc(),g0=c0.games[c0.games.length-1],p0=pool(c0,g0);g0.dice=p0[Math.floor(Math.random()*p0.length)];persist();render();return}
   if(el.id==="mk"){
@@ -483,13 +525,19 @@ document.addEventListener("click",function(e){
     if(!ok){E.textContent="Kies voor elke speler een plek.";return}
     var wn=vals.filter(function(x){return x===1}).length;
     if(wn!==1){E.textContent="Er moet precies één winnaar zijn.";return}
-        c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});delete c1.plan;planOpen=false;persist();render();return}
+    var snd=$("pnx")&&$("pnx").checked;
+    c1.games.push({id:uid(),date:new Date().toLocaleDateString("nl-NL"),res:res});delete c1.plan;planOpen=false;persist();render();
+    if(snd)sendPush(c1,resultMsg(c1));
+    return}
   if(el.dataset.pl){planOpen=true;render();return}
   if(el.id==="plcn"){planOpen=false;render();return}
   if(el.id==="plcl"){var c9=cc();delete c9.plan;planOpen=false;persist();render();return}
-  if(el.id==="plsv"){var c10=cc(),pd=$("pld").value,pt=$("plt").value,pw=$("plw").value.trim();
+  if(el.id==="plsv"){var c10=cc(),pd=$("pld").value,pt=$("plt").value,pw=$("plw").value.trim(),snd3=$("pnp")&&$("pnp").checked;
     if(pd||pt||pw)c10.plan={date:pd,time:pt,where:pw};else delete c10.plan;
-    planOpen=false;persist();render();return}
+    planOpen=false;persist();render();
+    if(snd3&&(pd||pt||pw))sendPush(c10,"Volgend duel: "+[planDate(pd),pw,pt].filter(Boolean).join(" · "));
+    return}
+  if(el.dataset.bell){pushToggle(cc());return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
   if(el.id==="kgr"){cupAsk='g';render();return}
   if(el.id==="kgy"){var c8=cc();c8.games=[];cupAsk='';persist();render();return}
@@ -528,7 +576,7 @@ function start(session){
     return sb.from("league").select("data").eq("id",1).maybeSingle().then(function(r){
       if(r.error){sync("Laden mislukt: "+r.error.message)}
       else{var d=r.data&&r.data.data;S=d&&d.comps?d:{comps:[]};sync("Je beheert deze stand.")}
-      loaded=true;render();
+      loaded=true;render();pushLoad();
     });
   });
 }

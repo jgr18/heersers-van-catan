@@ -2,6 +2,13 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.3
+
+- Pushmeldingen per competitie. Deelnemers zetten ze zelf aan met **🔔 Meldingen** bovenaan een competitie.
+- Als beheerder stuur je automatisch een melding bij een nieuwe uitslag (met de stand en een eventuele kampioen), bij een beslist seizoen en bij een nieuw "Volgend duel". Met het vinkje **Stuur melding naar de deelnemers** kun je dat per keer uitzetten, bijvoorbeeld bij het corrigeren van een stand.
+- Bij een nieuwe toegangscode vervallen alle aanmeldingen voor meldingen.
+- Nieuw: `sw.js`, `supabase-meldingen.sql` en de Edge Function `send-push`.
+
 ## v1.2
 
 - Seizoensgrafiek: op de horizontale as staat nu "Duels" en op de verticale as "Punten".
