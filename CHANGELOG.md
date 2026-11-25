@@ -2,6 +2,18 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.5
+
+- Podium boven de stand met de uitslag van het laatste duel: winnaar in het midden, de rest op lagere treden, 4e plek en lager staan naast het podium. Gedeelde plekken staan op dezelfde trede.
+- Ook een podium in het seizoensarchief (eindstand van een afgesloten seizoen) en bij de beker (totaalstand).
+- Eigen figuren per speler en per plek in de map `spelers` (bijvoorbeeld `jan_1.png`, `jan_2.png`, `jan_3.png`). Plek 3 en lager gebruikt figuur 3. Spelers zonder figuren krijgen een stripfiguurtje in hun kleur.
+
+## v1.4
+
+- De hele knop **Meldingen aan/uit** is nu aan te tikken, dus ook de tekst en niet alleen het belletje. De knop is groter en toont wanneer meldingen aan staan.
+- Aanzetten van meldingen is betrouwbaarder: de knop toont "Bezig..." en voorkomt dubbel tikken, de app haalt eerst de nieuwste versie van `sw.js` op, en een ontbrekende reactie geeft na 10 seconden een duidelijke melding.
+- Duidelijkere foutmeldingen, bijvoorbeeld bij een verouderde toegangscode of een browser die de meldingsdienst niet bereikt.
+
 ## v1.3
 
 - Pushmeldingen per competitie. Deelnemers zetten ze zelf aan met **🔔 Meldingen** bovenaan een competitie.
