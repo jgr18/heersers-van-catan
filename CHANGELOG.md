@@ -2,6 +2,11 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.7
+
+- Podium is twee keer zo diep, zodat een zittend figuur genoeg ruimte heeft. Spelers vanaf plek 4 staan iets verder van het podium af.
+- Figuren worden op de werkelijke onderkant van het plaatje geplaatst, zodat ze op alle plekken netjes op het blok staan.
+
 ## v1.6
 
 - Podium is nu één aaneengesloten geheel in 3D (goud, zilver, brons) met schaduw en glansrand. De figuren staan op het blok. Plek 4 en lager staan zonder voetstuk naast het podium.

@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.6</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.7</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -506,7 +506,7 @@ function figFallback(cx,y,c,rank){
   return o+'</g>';
 }
 function podiumSvg(spec){
-  var items=spec.items,colors=spec.colors||{},SW=80,STEPC=["#e2b43c","#c9ced6","#c58d52"],SH=[70,52,38],BW=76,BH=118,DX=12,DY=10;
+  var items=spec.items,colors=spec.colors||{},SW=80,STEPC=["#e2b43c","#c9ced6","#c58d52"],SH=[70,52,38],BW=76,BH=118,DX=24,DY=20;
   var groups={},ranks=[],pod=[],ex=[];
   items.forEach(function(it){if(!groups[it.rank]){groups[it.rank]=[];ranks.push(it.rank)}groups[it.rank].push(it)});
   ranks.sort(function(a,b){return a-b});
@@ -536,10 +536,10 @@ function podiumSvg(spec){
   var STR='stroke="rgba(59,42,26,.75)" stroke-width="1.5" stroke-linejoin="round"';
   o+='<ellipse cx="'+(W/2)+'" cy="'+(base+4)+'" rx="'+(W/2-8)+'" ry="8" fill="rgba(40,25,10,.28)" filter="url(#pb)"/>';
   // posities bepalen
-  var steps=[],figs=[],xx=x;
+  var steps=[],figs=[],xx=x,seenB=false,gapDone=false;
   order.forEach(function(ob){
-    if(ob.b){var n=ob.b.g.length;steps.push({x:xx,w:n*SW,h:SH[ob.b.i],i:ob.b.i,r:ob.b.r});ob.b.g.forEach(function(it,i){figs.push({it:it,cx:xx+SW*(i+.5),top:base-SH[ob.b.i],on:true,i:ob.b.i})});xx+=n*SW}
-    else{figs.push({it:ob.f,cx:xx+SW/2,top:base,on:false});xx+=SW}
+    if(ob.b){var n=ob.b.g.length;steps.push({x:xx,w:n*SW,h:SH[ob.b.i],i:ob.b.i,r:ob.b.r});ob.b.g.forEach(function(it,i){figs.push({it:it,cx:xx+SW*(i+.5),top:base-SH[ob.b.i],on:true,i:ob.b.i})});xx+=n*SW;seenB=true}
+    else{if(seenB&&!gapDone){xx+=DX;gapDone=true}figs.push({it:ob.f,cx:xx+SW/2,top:base,on:false});xx+=SW}
   });
   // tekenen: laagste stap eerst, zodat de hoogste over de bovenrand van zijn buur valt
   steps.slice().sort(function(a,b){return a.h-b.h}).forEach(function(s){
@@ -555,7 +555,7 @@ function podiumSvg(spec){
       o+='<polygon points="'+x1+','+top+' '+(x1+DX)+','+(top-DY)+' '+(x1+DX)+','+(tr-DY)+' '+x1+','+tr+'" fill="'+shade(STEPC[s.i],.72)+'" '+STR+'/>'}
   });
   figs.forEach(function(f){
-    var cx=f.cx+(f.on?DX/2:0),top=f.on?f.top-DY*.45:f.top;
+    var cx=f.cx+(f.on?DX/2:0),top=f.on?f.top-4.5:f.top;
     o+=person(f.it,cx,top)+label(f.it,f.cx);
   });
   return o+'</svg>';
