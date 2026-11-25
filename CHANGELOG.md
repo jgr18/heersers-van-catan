@@ -2,6 +2,10 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.8
+
+- Jan zit als 3e met zijn billen op de voorrand van het podium en als 4e (of lager) op een krukje naast het podium.
+
 ## v1.7
 
 - Podium is twee keer zo diep, zodat een zittend figuur genoeg ruimte heeft. Spelers vanaf plek 4 staan iets verder van het podium af.

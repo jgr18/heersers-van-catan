@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.7</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.8</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -522,10 +522,17 @@ function podiumSvg(spec){
   STEPC.forEach(function(c,i){o+='<linearGradient id="pg'+i+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c,1.12)+'"/><stop offset="1" stop-color="'+shade(c,.88)+'"/></linearGradient>'});
   o+='</defs>';
   function colv(n){var c=colors[n];return c?'var(--c-'+c+')':'var(--ink)'}
-  function person(it,cx,top){
+  var SITS={jan:.75};
+  function person(it,cx,top,on,ft){
     var urls=figUrls(it.n,it.rank),key=urls[0],st=IMG[key];
     if(st===undefined)figProbe(key,urls);
     var out='';
+    var sit=st&&st.u&&it.rank>=3&&SITS[slug(it.n)];
+    if(sit){var sc2=Math.min(BW/st.w,BH/st.h),fw2=st.w*sc2,fh2=st.h*sc2,yy;
+      if(on){cx=cx-DX/2;yy=ft-5-sit*fh2}
+      else{var sh=(1-sit)*fh2;yy=base-fh2;
+        out+='<g stroke="rgba(59,42,26,.75)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"><path d="M'+(cx-15)+','+(base-sh+2)+' L'+(cx-19)+','+base+' M'+(cx+15)+','+(base-sh+2)+' L'+(cx+19)+','+base+' M'+cx+','+(base-sh+4)+' L'+cx+','+(base-1)+'" fill="none" stroke-width="3" style="stroke:#8a5a2b"/><ellipse cx="'+cx+'" cy="'+(base-sh)+'" rx="23" ry="6" fill="#c58d52"/><ellipse cx="'+cx+'" cy="'+(base-sh-1.5)+'" rx="23" ry="5" fill="#dcaa72"/></g>'}
+      return out+'<image href="'+st.u+'" x="'+(cx-fw2/2).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+fw2.toFixed(1)+'" height="'+fh2.toFixed(1)+'"/>'}
     if(st&&st.u){var sc=Math.min(BW/st.w,BH/st.h),fw=st.w*sc,fh=st.h*sc;out+='<image href="'+st.u+'" x="'+(cx-fw/2).toFixed(1)+'" y="'+(top-fh*(st.b||1)+1).toFixed(1)+'" width="'+fw.toFixed(1)+'" height="'+fh.toFixed(1)+'"/>'}
     else if(st===false)out+=figFallback(cx,top+2,colors[it.n],it.rank);
     return out;
@@ -556,7 +563,7 @@ function podiumSvg(spec){
   });
   figs.forEach(function(f){
     var cx=f.cx+(f.on?DX/2:0),top=f.on?f.top-4.5:f.top;
-    o+=person(f.it,cx,top)+label(f.it,f.cx);
+    o+=person(f.it,cx,top,f.on,f.top)+label(f.it,f.cx);
   });
   return o+'</svg>';
 }
