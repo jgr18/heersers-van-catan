@@ -2,6 +2,10 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.6
+
+- Podium is nu één aaneengesloten geheel in 3D (goud, zilver, brons) met schaduw en glansrand. De figuren staan op het blok. Plek 4 en lager staan zonder voetstuk naast het podium.
+
 ## v1.5
 
 - Podium boven de stand met de uitslag van het laatste duel: winnaar in het midden, de rest op lagere treden, 4e plek en lager staan naast het podium. Gedeelde plekken staan op dezelfde trede.

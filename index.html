@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.5</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.6</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -501,7 +501,7 @@ function figFallback(cx,y,c,rank){
   return o+'</g>';
 }
 function podiumSvg(spec){
-  var items=spec.items,colors=spec.colors||{},SW=80,STEPC={0:"#e2b43c",1:"#c9ced6",2:"#c58d52"},SH=[70,52,38],BW=76,BH=118;
+  var items=spec.items,colors=spec.colors||{},SW=80,STEPC=["#e2b43c","#c9ced6","#c58d52"],SH=[70,52,38],BW=76,BH=118,DX=12,DY=10;
   var groups={},ranks=[],pod=[],ex=[];
   items.forEach(function(it){if(!groups[it.rank]){groups[it.rank]=[];ranks.push(it.rank)}groups[it.rank].push(it)});
   ranks.sort(function(a,b){return a-b});
@@ -512,7 +512,10 @@ function podiumSvg(spec){
   [pod[1],pod[0],pod[2]].forEach(function(b){if(b)order.push({b:b})});
   right.forEach(function(it){order.push({f:it})});
   var ncol=0;order.forEach(function(o){ncol+=o.b?o.b.g.length:1});
-  var W=Math.max(ncol*SW+6,260),k=Math.max(1,W/340),base=BH+SH[0]+8,x=(W-ncol*SW)/2,o='<svg viewBox="0 0 '+W+' '+Math.round(base+30+14*k)+'" style="width:100%;height:auto;display:block" role="img" aria-label="Podium">';
+  var W=Math.max(ncol*SW+DX+6,260),k=Math.max(1,W/340),base=BH+SH[0]+8,x=(W-DX-ncol*SW)/2,o='<svg viewBox="0 0 '+W+' '+Math.round(base+30+14*k)+'" style="width:100%;height:auto;display:block" role="img" aria-label="Podium"><defs><filter id="pb"><feGaussianBlur stdDeviation="3"/></filter>';
+  function shade(h,f){h=h.replace("#","");var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);function t(v){return Math.round(f>=1?v+(255-v)*(f-1):v*f)}return "rgb("+t(r)+","+t(g)+","+t(b)+")"}
+  STEPC.forEach(function(c,i){o+='<linearGradient id="pg'+i+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c,1.12)+'"/><stop offset="1" stop-color="'+shade(c,.88)+'"/></linearGradient>'});
+  o+='</defs>';
   function colv(n){var c=colors[n];return c?'var(--c-'+c+')':'var(--ink)'}
   function person(it,cx,top){
     var urls=figUrls(it.n,it.rank),key=urls[0],st=IMG[key];
@@ -520,22 +523,35 @@ function podiumSvg(spec){
     var out='';
     if(st&&st.u){var sc=Math.min(BW/st.w,BH/st.h),fw=st.w*sc,fh=st.h*sc;out+='<image href="'+st.u+'" x="'+(cx-fw/2).toFixed(1)+'" y="'+(top-fh+3).toFixed(1)+'" width="'+fw.toFixed(1)+'" height="'+fh.toFixed(1)+'"/>'}
     else if(st===false)out+=figFallback(cx,top+2,colors[it.n],it.rank);
-    out+='<text x="'+cx+'" y="'+(base+5+12*k)+'" text-anchor="middle" font-size="'+(12*k).toFixed(1)+'" font-weight="700" style="fill:'+colv(it.n)+';stroke:rgba(59,42,26,.6);stroke-width:.4px">'+esc(it.n)+'</text><text x="'+cx+'" y="'+(base+8+24*k)+'" text-anchor="middle" font-size="'+(11*k).toFixed(1)+'" fill="rgba(59,42,26,.8)">'+esc(it.label||"")+'</text>';
     return out;
   }
-  var STR='stroke="rgba(59,42,26,.75)" stroke-width="1.6" stroke-linejoin="round"';
+  function label(it,cx){
+    return '<text x="'+cx+'" y="'+(base+5+12*k)+'" text-anchor="middle" font-size="'+(12*k).toFixed(1)+'" font-weight="700" style="fill:'+colv(it.n)+';stroke:rgba(59,42,26,.6);stroke-width:.4px">'+esc(it.n)+'</text><text x="'+cx+'" y="'+(base+8+24*k)+'" text-anchor="middle" font-size="'+(11*k).toFixed(1)+'" fill="rgba(59,42,26,.8)">'+esc(it.label||"")+'</text>';
+  }
+  var STR='stroke="rgba(59,42,26,.75)" stroke-width="1.5" stroke-linejoin="round"';
+  o+='<ellipse cx="'+(W/2)+'" cy="'+(base+4)+'" rx="'+(W/2-8)+'" ry="8" fill="rgba(40,25,10,.28)" filter="url(#pb)"/>';
+  // posities bepalen
+  var steps=[],figs=[],xx=x;
   order.forEach(function(ob){
-    if(ob.b){
-      var n=ob.b.g.length,w=n*SW-6,h=SH[ob.b.i],top=base-h;
-      o+='<rect x="'+(x+3)+'" y="'+top+'" width="'+w+'" height="'+h+'" rx="3" fill="'+STEPC[ob.b.i]+'" '+STR+'/><text x="'+(x+3+w/2)+'" y="'+(top+h/2+8)+'" text-anchor="middle" font-size="'+(22*k).toFixed(1)+'" font-weight="800" fill="rgba(59,42,26,.85)">'+ob.b.r+'</text>';
-      ob.b.g.forEach(function(it,i){o+=person(it,x+SW*(i+.5),top)});
-      x+=n*SW;
-    }else{
-      var it=ob.f,cx=x+SW/2,top2=base-26;
-      o+='<rect x="'+(x+3)+'" y="'+top2+'" width="'+(SW-6)+'" height="26" rx="3" fill="#9a8fb0" '+STR+'/><text x="'+cx+'" y="'+(top2+19)+'" text-anchor="middle" font-size="'+(13*k).toFixed(1)+'" font-weight="800" fill="rgba(59,42,26,.85)">'+it.rank+'</text>';
-      o+=person(it,cx,top2);
-      x+=SW;
-    }
+    if(ob.b){var n=ob.b.g.length;steps.push({x:xx,w:n*SW,h:SH[ob.b.i],i:ob.b.i,r:ob.b.r});ob.b.g.forEach(function(it,i){figs.push({it:it,cx:xx+SW*(i+.5),top:base-SH[ob.b.i],on:true,i:ob.b.i})});xx+=n*SW}
+    else{figs.push({it:ob.f,cx:xx+SW/2,top:base,on:false});xx+=SW}
+  });
+  // tekenen: laagste stap eerst, zodat de hoogste over de bovenrand van zijn buur valt
+  steps.slice().sort(function(a,b){return a.h-b.h}).forEach(function(s){
+    var top=base-s.h,x1=s.x+s.w;
+    o+='<polygon points="'+s.x+','+top+' '+x1+','+top+' '+(x1+DX)+','+(top-DY)+' '+(s.x+DX)+','+(top-DY)+'" fill="'+shade(STEPC[s.i],1.3)+'" '+STR+'/>';
+    o+='<rect x="'+s.x+'" y="'+top+'" width="'+s.w+'" height="'+s.h+'" rx="3" fill="url(#pg'+s.i+')" '+STR+'/>';
+    o+='<rect x="'+(s.x+4)+'" y="'+(top+2.5)+'" width="'+(s.w-8)+'" height="4" rx="2" fill="rgba(255,255,255,.55)"/>';
+    o+='<text x="'+(s.x+s.w/2)+'" y="'+(top+s.h/2+8)+'" text-anchor="middle" font-size="'+(22*k).toFixed(1)+'" font-weight="800" fill="rgba(59,42,26,.85)">'+s.r+'</text>';
+  });
+  steps.forEach(function(s,j){
+    var nb=steps[j+1],hr=nb?nb.h:0;
+    if(s.h>hr){var top=base-s.h,x1=s.x+s.w,tr=base-hr;
+      o+='<polygon points="'+x1+','+top+' '+(x1+DX)+','+(top-DY)+' '+(x1+DX)+','+(tr-DY)+' '+x1+','+tr+'" fill="'+shade(STEPC[s.i],.72)+'" '+STR+'/>'}
+  });
+  figs.forEach(function(f){
+    var cx=f.cx+(f.on?DX/2:0),top=f.on?f.top-DY/2+(f.i===0?8:0):f.top;
+    o+=person(f.it,cx,top)+label(f.it,f.cx);
   });
   return o+'</svg>';
 }
