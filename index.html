@@ -650,6 +650,7 @@ document.addEventListener("click",function(e){
     return}
   if(el.id==="lo"){if(viewer)stopViewer("");else sb.auth.signOut();return}
   if(el.dataset.t){var t=el.dataset.t;setOpen=false;grafOpen=false;planOpen=false;delAsk=false;cupScr=false;cupAsk='';cupPend=null;beker=t==="B";addOpen=t==="+";accOpen=t==="A"&&edit;if(!beker&&!addOpen&&!accOpen)cur=t;render();if(accOpen)loadCode();return}
+  if(el.dataset.bell){pushToggle(cc());return}
   if(!edit)return;
   if(el.id==="cg"||el.id==="cy"){saveCode(genCode());return}
   if(el.id==="cr"){codeAsk=true;render();return}
@@ -705,7 +706,6 @@ document.addEventListener("click",function(e){
     planOpen=false;persist();render();
     if(snd3&&(pd||pt||pw))sendPush(c10,"Volgend duel: "+[planDate(pd),pw,pt].filter(Boolean).join(" · "));
     return}
-  if(el.dataset.bell){pushToggle(cc());return}
   if(el.dataset.del){var c2=cc();c2.games=c2.games.filter(function(g){return g.id!==el.dataset.del});persist();render();return}
   if(el.id==="kgr"){cupAsk='g';render();return}
   if(el.id==="kgy"){var c8=cc();c8.games=[];cupAsk='';persist();render();return}
