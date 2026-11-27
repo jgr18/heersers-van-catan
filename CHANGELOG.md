@@ -2,6 +2,12 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.9
+
+- Thema-figuren: Sinterklaas (plek 1 t/m 3, van 27 nov t/m 5 dec, zodra er in die periode een duel is ingevoerd) en kerst (alle plekken, van 6 t/m 26 dec). Daarna zijn de gewone figuren weer terug.
+- Bestandsnamen in de map `spelers`: `jan_sint_1.png` en `jan_kerst_1.png` (cijfer = plek, 3 geldt voor plek 3 en lager). Ontbreekt een thema-figuur, dan wordt de gewone figuur getoond.
+- Voorbeeld bekijken met `?thema=sint`, `?thema=kerst` of `?thema=geen` achter de link.
+
 ## v1.8
 
 - Jan zit als 3e met zijn billen op de voorrand van het podium en als 4e (of lager) op een krukje naast het podium.

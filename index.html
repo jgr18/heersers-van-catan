@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.8</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.9</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -471,7 +471,28 @@ function archiefBox(c){
 }
 var IMG={},PODS=[];
 function slug(n){return String(n).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"")}
-function figUrls(n,rank){var k=Math.min(rank,3),a=slug(n)+"_"+k+".png",b=String(n).replace(/\s+/g,"")+"_"+k+".png";return b===a?["spelers/"+a]:["spelers/"+a,"spelers/"+b]}
+/* Thema's voor de figuren. Pas hier de periodes aan (maand*100+dag, elk jaar opnieuw).
+   sint = alleen plek 1 t/m 3 en pas zodra er in die periode een duel is ingevoerd (naStand), kerst = alle plekken vanaf de begindatum. Voorbeeld bekijken: voeg ?thema=sint of ?thema=kerst toe aan de link. */
+var THEMAS=[{n:"sint",van:1127,tot:1205,max:3,naStand:true},{n:"kerst",van:1206,tot:1226,max:99}];
+function duelInPeriode(T,yr){
+  try{return S.comps.some(function(c){return c.games.some(function(g){
+    var p=String(g.date||"").split(/[-\/.]/),dd=+p[0],mm=+p[1],jj=+p[2],md=mm*100+dd;
+    return jj===yr&&md>=T.van&&md<=T.tot})})}catch(e){return false}
+}
+function themaNu(){
+  var m=(location.search.match(/[?&]thema=([a-z]*)/)||[])[1];
+  if(m!==undefined){for(var i=0;i<THEMAS.length;i++)if(THEMAS[i].n===m)return THEMAS[i];return null}
+  var d=new Date(),md=(d.getMonth()+1)*100+d.getDate();
+  for(var j=0;j<THEMAS.length;j++){var T=THEMAS[j];
+    if(md>=T.van&&md<=T.tot&&(!T.naStand||duelInPeriode(T,d.getFullYear())))return T}
+  return null;
+}
+function figUrls(n,rank){
+  var k=Math.min(rank,3),a=slug(n),b=String(n).replace(/\s+/g,""),th=themaNu(),out=[];
+  if(th&&rank<=th.max){out.push("spelers/"+a+"_"+th.n+"_"+k+".png");if(b!==a)out.push("spelers/"+b+"_"+th.n+"_"+k+".png")}
+  out.push("spelers/"+a+"_"+k+".png");if(b!==a)out.push("spelers/"+b+"_"+k+".png");
+  return out;
+}
 function figProbe(key,urls){
   if(key in IMG)return;
   IMG[key]=null;
