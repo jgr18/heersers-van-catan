@@ -154,13 +154,17 @@ function pushToggle(c){
   if(!pushOk()){pushMsg="Meldingen worden door deze browser niet ondersteund. Op een iPhone heb je iOS 16.4 of nieuwer nodig en moet de app op je beginscherm staan."+dg.txt;render();return}
   if(Notification.permission==="denied"){pushMsg="Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je telefoon voor deze app."+dg.txt;render();return}
   var on=pushComps.indexOf(c.id)>=0,next=on?pushComps.filter(function(x){return x!==c.id}):pushComps.concat([c.id]);
-  var p=on?Promise.resolve():Notification.requestPermission().then(function(r){if(r!=="granted")throw new Error("Je hebt geen toestemming gegeven.")});
+  function tmo(pr,naam,ms){return Promise.race([pr,new Promise(function(_,rej){setTimeout(function(){rej(new Error("Time-out bij: "+naam))},ms||15000)})])}
+  function stap(t){pushMsg=t;render()}
+  var p=on?Promise.resolve():tmo(Notification.requestPermission(),"toestemming vragen",60000).then(function(r){if(r!=="granted")throw new Error("Je hebt geen toestemming gegeven.")});
   pushBusy=true;render();
-  p.then(swReady).then(function(reg){
-    return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)})});
+  p.then(function(){if(!on)stap("Stap 1 van 3: toestemming gekregen...");return swReady()}).then(function(reg){
+    if(!on)stap("Stap 2 van 3: app klaar, aanmelden voor meldingen...");
+    return tmo(reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)})}),"aanmelden bij de meldingsdienst van je telefoon");
   }).then(function(sub){
     var j=sub.toJSON();
-    return sb.rpc("push_subscribe",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_comps:next}).then(function(r){if(r.error)throw new Error(r.error.message);pushComps=next});
+    if(!on)stap("Stap 3 van 3: opslaan...");
+    return tmo(sb.rpc("push_subscribe",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_comps:next}),"opslaan van je aanmelding").then(function(r){if(r.error)throw new Error(r.error.message);pushComps=next;pushMsg=""});
   }).catch(function(e){pushMsg=pushErr(e)+pushDiag().txt}).then(function(){pushBusy=false;render()});
 }
 function sendPush(c,body){
