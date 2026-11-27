@@ -2,6 +2,11 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.10
+
+- Het podium van het laatste duel, de Vorm en de thema-figuren (Sinterklaas/kerst) blijven zichtbaar na het afsluiten van een seizoen: ze kijken nu naar de duels over alle seizoenen heen.
+- Meldingen: op een iPhone verschijnt een duidelijke uitleg als de app niet vanaf het beginscherm is geopend. Bij een foutmelding staat een korte diagnoseregel erbij.
+
 ## v1.9
 
 - Thema-figuren: Sinterklaas (plek 1 t/m 3, van 27 nov t/m 5 dec, zodra er in die periode een duel is ingevoerd) en kerst (alle plekken, van 6 t/m 26 dec). Daarna zijn de gewone figuren weer terug.

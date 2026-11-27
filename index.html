@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.9</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.10</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -140,11 +140,19 @@ function pushErr(e){
   if(/Geen toegang/i.test(m))return "Je toegangscode is niet meer geldig. Open de link opnieuw of vul de nieuwe code in.";
   return "Meldingen instellen mislukt: "+m;
 }
+function pushDiag(){
+  var ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  var sa=!!navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+  var v=(navigator.userAgent.match(/OS (\d+)[_.](\d+)/)||[])[0]||"";
+  return {ios:ios,sa:sa,txt:" (Diagnose: "+(ios?"iOS":"geen iOS")+", beginscherm "+(sa?"ja":"nee")+", toestemming "+(("Notification" in window)?Notification.permission:"onbekend")+", PushManager "+(("PushManager" in window)?"ja":"nee")+(v?", "+v.replace(/_/g,"."):"")+")"};
+}
 function pushToggle(c){
   if(pushBusy)return;
   pushMsg="";
-  if(!pushOk()){pushMsg="Meldingen werken op een iPhone alleen als de app op je beginscherm staat: tik in Safari op het deelicoon en kies Zet op beginscherm. Open de app daarna vanaf je beginscherm.";render();return}
-  if(Notification.permission==="denied"){pushMsg="Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je telefoon voor deze app.";render();return}
+  var dg=pushDiag();
+  if(dg.ios&&!dg.sa){pushMsg="Op een iPhone werken meldingen alleen als je de app opent via het icoon op je beginscherm. Tik in Safari op het deelicoon, kies Zet op beginscherm en open de app daarna vanaf het beginscherm."+dg.txt;render();return}
+  if(!pushOk()){pushMsg="Meldingen worden door deze browser niet ondersteund. Op een iPhone heb je iOS 16.4 of nieuwer nodig en moet de app op je beginscherm staan."+dg.txt;render();return}
+  if(Notification.permission==="denied"){pushMsg="Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je telefoon voor deze app."+dg.txt;render();return}
   var on=pushComps.indexOf(c.id)>=0,next=on?pushComps.filter(function(x){return x!==c.id}):pushComps.concat([c.id]);
   var p=on?Promise.resolve():Notification.requestPermission().then(function(r){if(r!=="granted")throw new Error("Je hebt geen toestemming gegeven.")});
   pushBusy=true;render();
@@ -153,7 +161,7 @@ function pushToggle(c){
   }).then(function(sub){
     var j=sub.toJSON();
     return sb.rpc("push_subscribe",{p_code:viewer?vcode:null,p_endpoint:sub.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_comps:next}).then(function(r){if(r.error)throw new Error(r.error.message);pushComps=next});
-  }).catch(function(e){pushMsg=pushErr(e)}).then(function(){pushBusy=false;render()});
+  }).catch(function(e){pushMsg=pushErr(e)+pushDiag().txt}).then(function(){pushBusy=false;render()});
 }
 function sendPush(c,body){
   if(!edit||!sb)return;
@@ -247,14 +255,22 @@ function resultOptions(c){
     return [String(val),lab+' ('+g.v+')'];
   });
 }
+function duelLijst(c){
+  var out=[];
+  (c.seasons||[]).slice().sort(function(a,b){return a.nr-b.nr}).forEach(function(x){
+    if(x.games&&x.games.length&&x.pts){var ps={players:c.players,pts:x.pts};x.games.forEach(function(g,i){out.push({g:g,c:ps,n:i+1})})}
+  });
+  c.games.forEach(function(g,i){out.push({g:g,c:c,n:i+1})});
+  return out;
+}
 function formBox(c,st){
-  var gs=c.games.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 duels)</small></h2>';
+  var all=duelLijst(c),gs=all.slice(-5),off=5-gs.length,h='<div class="card"><h2>Vorm <small>(laatste 5 duels)</small></h2>';
   st.forEach(function(x){
     h+='<div class="frow"><span>'+cn(c,x.n)+'</span><span class="dots">';
     for(var i=0;i<5;i++){
-      var g=i<off?null:gs[i-off],pl=g?place(c,g,x.n):0;
+      var e=i<off?null:gs[i-off],pl=e?place(e.c,e.g,x.n):0;
       if(!pl)h+='<i class="d e"></i>';
-      else h+='<i class="d '+(pl===1?'w':pl===2?'s':'t')+'" title="Duel '+(c.games.length-gs.length+(i-off)+1)+': '+pl+'e plaats"></i>';
+      else h+='<i class="d '+(pl===1?'w':pl===2?'s':'t')+'" title="'+pl+'e plaats"></i>';
     }
     h+='</span></div>';
   });
@@ -475,7 +491,7 @@ function slug(n){return String(n).toLowerCase().normalize("NFD").replace(/[̀-ͯ
    sint = alleen plek 1 t/m 3 en pas zodra er in die periode een duel is ingevoerd (naStand), kerst = alle plekken vanaf de begindatum. Voorbeeld bekijken: voeg ?thema=sint of ?thema=kerst toe aan de link. */
 var THEMAS=[{n:"sint",van:1127,tot:1205,max:3,naStand:true},{n:"kerst",van:1206,tot:1226,max:99}];
 function duelInPeriode(T,yr){
-  try{return S.comps.some(function(c){return c.games.some(function(g){
+  try{return S.comps.some(function(c){return duelLijst(c).some(function(e){var g=e.g;
     var p=String(g.date||"").split(/[-\/.]/),dd=+p[0],mm=+p[1],jj=+p[2],md=mm*100+dd;
     return jj===yr&&md>=T.van&&md<=T.tot})})}catch(e){return false}
 }
@@ -590,10 +606,11 @@ function podiumSvg(spec){
 }
 function ptsTxt(v){return "+"+v+(v===1?" punt":" punten")}
 function lastPodium(c){
-  if(!c.games.length)return '';
-  var g=c.games[c.games.length-1];
-  var items=c.players.map(function(p){var q=place(c,g,p)||c.players.length;return {n:p,rank:q,label:ptsTxt(pts(c,q))}});
-  return '<div class="card"><h2>🏅 Laatste duel</h2><small>Duel '+c.games.length+' · '+esc(g.date)+'</small>'+podHolder({items:items,colors:c.colors})+'</div>';
+  var all=duelLijst(c);
+  if(!all.length)return '';
+  var e=all[all.length-1],g=e.g;
+  var items=c.players.map(function(p){var q=place(e.c,g,p)||c.players.length;return {n:p,rank:q,label:ptsTxt(pts(e.c,q))}});
+  return '<div class="card"><h2>🏅 Laatste duel</h2><small>Duel '+e.n+' · '+esc(g.date)+'</small>'+podHolder({items:items,colors:c.colors})+'</div>';
 }
 function rankByPts(rows,key){return rows.map(function(r){var hi=0;rows.forEach(function(q){if(q[key]>r[key])hi++});return {n:r.n,rank:hi+1}})}
 function cupBox(c,s){
