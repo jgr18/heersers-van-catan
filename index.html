@@ -105,7 +105,7 @@ main{position:relative;z-index:1}
 <div id="view"></div>
 <div class="sync" id="sync"></div>
 <div style="text-align:center;margin-top:4px" id="who"></div>
-<div class="sync" id="ver" style="margin-bottom:12px">v1.10</div>
+<div class="sync" id="ver" style="margin-bottom:12px">v1.11</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -551,13 +551,14 @@ function podiumSvg(spec){
   var groups={},ranks=[],pod=[],ex=[];
   items.forEach(function(it){if(!groups[it.rank]){groups[it.rank]=[];ranks.push(it.rank)}groups[it.rank].push(it)});
   ranks.sort(function(a,b){return a-b});
-  ranks.forEach(function(r){if(r<=3&&pod.length<3)pod.push({g:groups[r],r:r,i:pod.length});else groups[r].forEach(function(it){ex.push(it)})});
+  [1,2,3].forEach(function(r,i){pod.push({g:groups[r]||[],r:r,i:i})});
+  ranks.forEach(function(r){if(r>3)groups[r].forEach(function(it){ex.push(it)})});
   var order=[];
   var left=[],right=[];ex.forEach(function(it,i){(i%2?left:right).push(it)});
   left.reverse().forEach(function(it){order.push({f:it})});
   [pod[1],pod[0],pod[2]].forEach(function(b){if(b)order.push({b:b})});
   right.forEach(function(it){order.push({f:it})});
-  var ncol=0;order.forEach(function(o){ncol+=o.b?o.b.g.length:1});
+  var ncol=0;order.forEach(function(o){ncol+=o.b?Math.max(1,o.b.g.length):1});
   var W=Math.max(ncol*SW+DX+6,260),k=Math.max(1,W/340),base=BH+SH[0]+8,x=(W-DX-ncol*SW)/2,o='<svg viewBox="0 0 '+W+' '+Math.round(base+30+14*k)+'" style="width:100%;height:auto;display:block" role="img" aria-label="Podium"><defs><filter id="pb"><feGaussianBlur stdDeviation="3"/></filter>';
   function shade(h,f){h=h.replace("#","");var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);function t(v){return Math.round(f>=1?v+(255-v)*(f-1):v*f)}return "rgb("+t(r)+","+t(g)+","+t(b)+")"}
   STEPC.forEach(function(c,i){o+='<linearGradient id="pg'+i+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c,1.12)+'"/><stop offset="1" stop-color="'+shade(c,.88)+'"/></linearGradient>'});
@@ -586,7 +587,7 @@ function podiumSvg(spec){
   // posities bepalen
   var steps=[],figs=[],xx=x,seenB=false,gapDone=false;
   order.forEach(function(ob){
-    if(ob.b){var n=ob.b.g.length;steps.push({x:xx,w:n*SW,h:SH[ob.b.i],i:ob.b.i,r:ob.b.r});ob.b.g.forEach(function(it,i){figs.push({it:it,cx:xx+SW*(i+.5),top:base-SH[ob.b.i],on:true,i:ob.b.i})});xx+=n*SW;seenB=true}
+    if(ob.b){var n=Math.max(1,ob.b.g.length);steps.push({x:xx,w:n*SW,h:SH[ob.b.i],i:ob.b.i,r:ob.b.r});ob.b.g.forEach(function(it,i){figs.push({it:it,cx:xx+SW*(i+.5),top:base-SH[ob.b.i],on:true,i:ob.b.i})});xx+=n*SW;seenB=true}
     else{if(seenB&&!gapDone){xx+=DX;gapDone=true}figs.push({it:ob.f,cx:xx+SW/2,top:base,on:false});xx+=SW}
   });
   // tekenen: laagste stap eerst, zodat de hoogste over de bovenrand van zijn buur valt

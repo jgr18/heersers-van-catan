@@ -2,6 +2,10 @@
 
 Nieuwste versie bovenaan. Het versienummer staat onderaan in de app.
 
+## v1.11
+
+- Het podium toont altijd alle drie de treden (1, 2 en 3), ook als een plek leeg blijft. Bij een gedeelde plek staan de spelers samen op een bredere trede.
+
 ## v1.10
 
 - Het podium van het laatste duel, de Vorm en de thema-figuren (Sinterklaas/kerst) blijven zichtbaar na het afsluiten van een seizoen: ze kijken nu naar de duels over alle seizoenen heen.
